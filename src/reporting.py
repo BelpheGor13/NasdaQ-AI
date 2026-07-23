@@ -67,6 +67,38 @@ def build_report(results: dict) -> str:
             )
         lines.append("")
 
+    lines.append("## أنماط إمكانية الربح الكامنة (maxRiskReward)\n")
+    lines.append(
+        "بالإضافة إلى البحث عن أنماط مرتبطة بالربح/الخسارة الفعلي، جرى بحث مستقل عن أنماط مرتبطة بارتفاع أو "
+        "انخفاض **إمكانية الربح الكامنة** (`maxRiskReward` — أفضل ما كانت الصفقة قد تحققه، بصرف النظر عن مكان "
+        "إغلاقها فعليًا). ملاحظة إحصائية: هذا المتغير غير سالب دائمًا بحكم تعريفه (لا خسائر فيه)، لذا فإن "
+        "\"معامل الربح\" (Profit Factor) ليس مقياسًا ذا معنى هنا؛ الاعتماد كان على العائد المتوقع (متوسط القيمة) "
+        "بدلاً منه.\n"
+    )
+    n_tested_pot = results["n_candidates_tested_potential"]
+    n_fdr_pot = results["n_fdr_survivors_potential"]
+    lines.append(f"من أصل **{n_tested_pot}** توليفة مُختبرة على هذا الهدف، نجت **{n_fdr_pot}** بعد تصحيح FDR.\n")
+
+    top_scored_pot = results["top_scored_potential"]
+    if len(top_scored_pot):
+        lines.append("| الشرط | العيّنة n | متوسط إمكانية الربح (R) | p (FDR) | مونت كارلو | الفئة |")
+        lines.append("|---|---|---|---|---|---|")
+        for _, r in top_scored_pot.head(5).iterrows():
+            lines.append(f"| `{r['condition']}` | {r['n']} | {_fmt(r['expectancy'])} | {_fmt(r['p_fdr_bh'])} "
+                         f"| {r['mc_verdict']} | {r['confidence_tier']} |")
+        lines.append("")
+
+    cross_ref = results.get("cross_ref")
+    if cross_ref:
+        top_n = int(top_scored.iloc[0]["n"]) if len(top_scored) else "غير متوفر"
+        lines.append(
+            f"**نتيجة تقاطع مهمة**: أقوى نمط في تحليل الربح/الخسارة الفعلي — `{cross_ref['condition']}` — "
+            f"ظهر أيضًا في تحليل إمكانية الربح الكامنة بعائد متوقع {_fmt(cross_ref['expectancy_on_potential'])}R "
+            f"و p (FDR) = {_fmt(cross_ref['p_fdr_bh_on_potential'])} على هذا الهدف المستقل. اتفاق نمط واحد عبر "
+            f"هدفين مُشتقّين بشكل مستقل (العائد الفعلي مقابل أقصى إمكانية محتملة من الشموع) دليل أقوى من نجاحه "
+            f"في اختبار واحد فقط، رغم أن العيّنة (n={top_n}) تبقى صغيرة نسبيًا.\n"
+        )
+
     lines.append("## نتائج استكشافية منخفضة الثقة\n")
     if len(exploratory):
         lines.append(f"هذه الأنماط ({len(exploratory)} إجمالاً، تُعرض أبرز 8 منها) أظهرت دلالة إحصائية أولية "

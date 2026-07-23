@@ -15,7 +15,43 @@ from src import (
 )
 
 TARGET_COL = "r_multiple"
+POTENTIAL_TARGET_COL = "maxRiskReward"
 N_CANDIDATES_TO_ENRICH = 30
+
+
+def run_pattern_pipeline(feats, target_col: str, n_enrich: int = N_CANDIDATES_TO_ENRICH):
+    """Runs search -> walk-forward -> Monte Carlo -> Bayesian evidence ->
+    stability/regime -> scoring for one target column. Used for both the
+    realized-outcome target (r_multiple) and the potential target
+    (maxRiskReward), per spec item 5: search for patterns associated with
+    (a) win/loss and (b) high/low maxRiskReward potential.
+    """
+    candidates = pattern_search.search_patterns(feats, target_col=target_col, min_n=20, max_condition_depth=2)
+    n_candidates_tested = len(candidates)
+    n_fdr_survivors = int(candidates["reject_fdr"].sum())
+    print(f"  tested {n_candidates_tested} candidates, {n_fdr_survivors} survive FDR correction")
+
+    top = candidates.head(n_enrich).reset_index(drop=True)
+
+    wf, fold_details = walk_forward.run_walk_forward_for_candidates(feats, top, target_col=target_col, top_n=len(top))
+    mc = monte_carlo.run_mc_for_candidates(feats, top, target_col=target_col)
+    bay = bayesian_evidence.add_bayesian_evidence(feats, top, target_col=target_col)
+    stab = stability_regime.run_stability_regime_for_candidates(feats, top, target_col=target_col)
+
+    merged = top.copy()
+    for extra, cols in [
+        (wf, ["n_folds_with_data", "n_folds_positive", "expectancy_sign_consistent", "expectancy_std_across_folds"]),
+        (mc, ["prob_sign_flip", "perm_p_expectancy", "mc_verdict"]),
+        (bay, ["posterior_win_rate_mean", "posterior_win_rate_ci_lo", "posterior_win_rate_ci_hi",
+               "bayes_factor_vs_base_rate", "bayes_evidence"]),
+        (stab, ["stability_applicable", "stability_pass_fraction", "stability_verdict",
+                "regime_dependent_on", "regime_verdict"]),
+    ]:
+        for c in cols:
+            merged[c] = extra[c].values
+
+    scored = scoring.compute_robustness_score(merged)
+    return candidates, scored, fold_details, n_candidates_tested, n_fdr_survivors
 
 
 def main():
@@ -45,36 +81,30 @@ def main():
         on="id", how="left",
     )
 
-    print("\n[4/9] Searching composite pattern space...")
-    candidates = pattern_search.search_patterns(feats, target_col=TARGET_COL, min_n=20, max_condition_depth=2)
-    n_candidates_tested = len(candidates)
-    n_fdr_survivors = int(candidates["reject_fdr"].sum())
-    print(f"  tested {n_candidates_tested} candidates, {n_fdr_survivors} survive FDR correction")
+    print("\n[4/9] Searching composite pattern space (realized outcome: r_multiple)...")
+    candidates, scored, fold_details, n_candidates_tested, n_fdr_survivors = run_pattern_pipeline(feats, TARGET_COL)
     candidates.drop(columns=["condition_dict"]).to_csv(config.DATA_OUT / "all_candidates.csv", index=False)
-
-    top = candidates.head(N_CANDIDATES_TO_ENRICH).reset_index(drop=True)
-
-    print("\n[5/9] Walk-forward, Monte Carlo, Bayesian evidence, stability/regime checks...")
-    wf, fold_details = walk_forward.run_walk_forward_for_candidates(feats, top, target_col=TARGET_COL, top_n=len(top))
-    mc = monte_carlo.run_mc_for_candidates(feats, top, target_col=TARGET_COL)
-    bay = bayesian_evidence.add_bayesian_evidence(feats, top, target_col=TARGET_COL)
-    stab = stability_regime.run_stability_regime_for_candidates(feats, top, target_col=TARGET_COL)
-
-    merged = top.copy()
-    for extra, cols in [
-        (wf, ["n_folds_with_data", "n_folds_positive", "expectancy_sign_consistent", "expectancy_std_across_folds"]),
-        (mc, ["prob_sign_flip", "perm_p_expectancy", "mc_verdict"]),
-        (bay, ["posterior_win_rate_mean", "posterior_win_rate_ci_lo", "posterior_win_rate_ci_hi",
-               "bayes_factor_vs_base_rate", "bayes_evidence"]),
-        (stab, ["stability_applicable", "stability_pass_fraction", "stability_verdict",
-                "regime_dependent_on", "regime_verdict"]),
-    ]:
-        for c in cols:
-            merged[c] = extra[c].values
-
-    scored = scoring.compute_robustness_score(merged)
     scored.drop(columns=["condition_dict", "regime_dependent_on"]).to_csv(
         config.DATA_OUT / "top_scored_patterns.csv", index=False)
+
+    print("\n[4b/9] Searching composite pattern space (potential: maxRiskReward)...")
+    candidates_pot, scored_pot, fold_details_pot, n_candidates_tested_pot, n_fdr_survivors_pot = \
+        run_pattern_pipeline(feats, POTENTIAL_TARGET_COL)
+    candidates_pot.drop(columns=["condition_dict"]).to_csv(config.DATA_OUT / "all_candidates_potential.csv", index=False)
+    scored_pot.drop(columns=["condition_dict", "regime_dependent_on"]).to_csv(
+        config.DATA_OUT / "top_scored_patterns_potential.csv", index=False)
+
+    # Cross-reference: does the top realized-outcome pattern also show up
+    # as significant for the potential target? Agreement across two
+    # independently-derived targets (actual R vs MFE-based potential) is
+    # stronger evidence than either alone.
+    cross_ref = None
+    if len(scored) and len(candidates_pot):
+        top_condition = scored.iloc[0]["condition"]
+        match = candidates_pot[candidates_pot["condition"] == top_condition]
+        if len(match):
+            cross_ref = {"condition": top_condition, "p_fdr_bh_on_potential": float(match.iloc[0]["p_fdr_bh"]),
+                         "expectancy_on_potential": float(match.iloc[0]["expectancy"])}
 
     print("\n[6/9] ML/SHAP interpretability layer (exploratory only)...")
     imp_df = ml_shap.run_walk_forward_shap(feats, target_col=TARGET_COL)
@@ -116,6 +146,10 @@ def main():
         "base_win_rate": base_win_rate,
         "n_candidates_tested": n_candidates_tested,
         "n_fdr_survivors": n_fdr_survivors,
+        "top_scored_potential": scored_pot,
+        "n_candidates_tested_potential": n_candidates_tested_pot,
+        "n_fdr_survivors_potential": n_fdr_survivors_pot,
+        "cross_ref": cross_ref,
     }
 
     report_text = reporting.build_report(results)

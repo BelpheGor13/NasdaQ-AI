@@ -102,7 +102,17 @@ def compute_robustness_score(enriched: pd.DataFrame) -> pd.DataFrame:
         default="rejected_or_low_confidence",
     )
 
-    return out.sort_values("robustness_score", ascending=False)
+    # Rank confirmed > exploratory > rejected first, robustness_score only
+    # breaks ties within a tier. Sorting by robustness_score alone can bury
+    # a genuine FDR survivor below several higher-effect-size-but-
+    # insignificant "exploratory" candidates, since effect size and
+    # walk-forward consistency are heavily weighted components too -- but a
+    # confirmed finding should never be outranked by an unconfirmed one in
+    # a "top filters" summary.
+    tier_rank = {"confirmed": 0, "exploratory": 1, "rejected_or_low_confidence": 2}
+    out["_tier_rank"] = out["confidence_tier"].map(tier_rank)
+    out = out.sort_values(["_tier_rank", "robustness_score"], ascending=[True, False]).drop(columns=["_tier_rank"])
+    return out
 
 
 if __name__ == "__main__":

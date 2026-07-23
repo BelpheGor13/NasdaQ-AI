@@ -18,11 +18,27 @@
 | `day_of_week=2 & pct_dist_from_high_20d_bin=(0.136, 0.443]` | سلبي (تجنّب) | 50 | -0.455 | 10.0% | 0.403 | survives_monte_carlo | stable | holds_across_regimes_tested | exploratory | 78.3 |
 | `regime_vol_asof_prior_day=Low Vol & pre_entry_pct_up_candles_15m_bin=(0.467, 0.533]` | سلبي (تجنّب) | 75 | -0.385 | 14.7% | 0.381 | survives_monte_carlo | stable | holds_across_regimes_tested | exploratory | 74.5 |
 | `day_of_week=1 & pre_entry_momentum_30m_bin=(-0.0016, 0.000893]` | إيجابي | 48 | 0.694 | 39.6% | 1.000 | survives_monte_carlo | stable | holds_across_regimes_tested | exploratory | 69.8 |
-| `pct_dist_from_low_20d_bin=(0.864, 1.135] & pre_entry_momentum_5m_bin=(0.000459, 0.00899]` | إيجابي | 86 | 0.514 | 40.7% | 1.000 | survives_monte_carlo | stable | holds_across_regimes_tested | exploratory | 68.6 |
 | `pct_dist_from_high_20d_bin=(-0.136, 0.136] & pre_entry_momentum_5m_bin=(0.000459, 0.00899]` | إيجابي | 86 | 0.514 | 40.7% | 1.000 | survives_monte_carlo | stable | holds_across_regimes_tested | exploratory | 68.6 |
+| `pct_dist_from_low_20d_bin=(0.864, 1.135] & pre_entry_momentum_5m_bin=(0.000459, 0.00899]` | إيجابي | 86 | 0.514 | 40.7% | 1.000 | survives_monte_carlo | stable | holds_across_regimes_tested | exploratory | 68.6 |
 | `day_of_week=1 & regime_trend_asof_prior_day=Range` | إيجابي | 87 | 0.554 | 39.1% | 1.000 | survives_monte_carlo | n/a (categorical-only condition) | holds_across_regimes_tested | exploratory | 62.3 |
 | `side=sell & day_of_week=1` | إيجابي | 76 | 0.583 | 40.8% | 1.000 | survives_monte_carlo | n/a (categorical-only condition) | holds_across_regimes_tested | exploratory | 62.0 |
 | `pct_dist_from_high_20d_bin=(-0.136, 0.136] & pre_entry_momentum_30m_bin=(-0.0016, 0.000893]` | إيجابي | 112 | 0.492 | 41.1% | 1.000 | survives_monte_carlo | stable | holds_across_regimes_tested | exploratory | 59.5 |
+
+## أنماط إمكانية الربح الكامنة (maxRiskReward)
+
+بالإضافة إلى البحث عن أنماط مرتبطة بالربح/الخسارة الفعلي، جرى بحث مستقل عن أنماط مرتبطة بارتفاع أو انخفاض **إمكانية الربح الكامنة** (`maxRiskReward` — أفضل ما كانت الصفقة قد تحققه، بصرف النظر عن مكان إغلاقها فعليًا). ملاحظة إحصائية: هذا المتغير غير سالب دائمًا بحكم تعريفه (لا خسائر فيه)، لذا فإن "معامل الربح" (Profit Factor) ليس مقياسًا ذا معنى هنا؛ الاعتماد كان على العائد المتوقع (متوسط القيمة) بدلاً منه.
+
+من أصل **923** توليفة مُختبرة على هذا الهدف، نجت **1** بعد تصحيح FDR.
+
+| الشرط | العيّنة n | متوسط إمكانية الربح (R) | p (FDR) | مونت كارلو | الفئة |
+|---|---|---|---|---|---|
+| `day_of_week=3 & pre_entry_pct_up_candles_15m_bin=(0.467, 0.533]` | 37 | 0.162 | 0.016 | survives_monte_carlo | confirmed |
+| `regime_vol_asof_prior_day=Low Vol & pre_entry_pct_up_candles_15m_bin=(0.467, 0.533]` | 75 | 0.305 | 0.070 | survives_monte_carlo | exploratory |
+| `pct_dist_from_high_20d_bin=(-0.136, 0.136] & pre_entry_momentum_30m_bin=(-0.0016, 0.000893]` | 112 | 0.987 | 0.997 | survives_monte_carlo | exploratory |
+| `pct_dist_from_low_20d_bin=(0.864, 1.135] & pre_entry_momentum_30m_bin=(-0.0016, 0.000893]` | 112 | 0.987 | 0.997 | survives_monte_carlo | exploratory |
+| `pct_dist_from_high_20d_bin=(-0.136, 0.136] & pre_entry_momentum_5m_bin=(0.000459, 0.00899]` | 86 | 1.031 | 0.997 | survives_monte_carlo | exploratory |
+
+**نتيجة تقاطع مهمة**: أقوى نمط في تحليل الربح/الخسارة الفعلي — `day_of_week=3 & pre_entry_pct_up_candles_15m_bin=(0.467, 0.533]` — ظهر أيضًا في تحليل إمكانية الربح الكامنة بعائد متوقع 0.162R و p (FDR) = 0.016 على هذا الهدف المستقل. اتفاق نمط واحد عبر هدفين مُشتقّين بشكل مستقل (العائد الفعلي مقابل أقصى إمكانية محتملة من الشموع) دليل أقوى من نجاحه في اختبار واحد فقط، رغم أن العيّنة (n=37) تبقى صغيرة نسبيًا.
 
 ## نتائج استكشافية منخفضة الثقة
 
@@ -33,8 +49,8 @@
 - `day_of_week=2 & pct_dist_from_high_20d_bin=(0.136, 0.443]` (n=50, عائد متوقع=-0.455R)
 - `regime_vol_asof_prior_day=Low Vol & pre_entry_pct_up_candles_15m_bin=(0.467, 0.533]` (n=75, عائد متوقع=-0.385R)
 - `day_of_week=1 & pre_entry_momentum_30m_bin=(-0.0016, 0.000893]` (n=48, عائد متوقع=0.694R)
-- `pct_dist_from_low_20d_bin=(0.864, 1.135] & pre_entry_momentum_5m_bin=(0.000459, 0.00899]` (n=86, عائد متوقع=0.514R)
 - `pct_dist_from_high_20d_bin=(-0.136, 0.136] & pre_entry_momentum_5m_bin=(0.000459, 0.00899]` (n=86, عائد متوقع=0.514R)
+- `pct_dist_from_low_20d_bin=(0.864, 1.135] & pre_entry_momentum_5m_bin=(0.000459, 0.00899]` (n=86, عائد متوقع=0.514R)
 - `day_of_week=1 & regime_trend_asof_prior_day=Range` (n=87, عائد متوقع=0.554R)
 
 ## أنماط اختُبرت ورُفضت
