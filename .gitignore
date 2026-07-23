@@ -3,6 +3,7 @@ __pycache__/
 .ipynb_checkpoints/
 outputs/data/*.parquet
 outputs/data/*.csv
+outputs/data/*.json
 outputs/figures/*.png
 .venv/
 venv/

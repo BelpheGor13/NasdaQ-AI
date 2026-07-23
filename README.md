@@ -56,6 +56,108 @@ python -m src.walk_forward
 | `src/stats_utils.py` | أدوات إحصائية مشتركة (bootstrap، FDR، بايزي) |
 | `src/config.py` | المسارات والثوابت والافتراضات الموثَّقة |
 
+## اختبار الوقف المتحرك (Trailing Stop) — تحليل افتراضي منفصل
+
+اختبار "ماذا لو" لاحق، منفصل تمامًا عن خط الأنابيب أعلاه ولا يعدّل أي بيانات أصلية (انظر
+`trailing-stop-optimization-prompt.md`): هل يحسّن وقف متحرك (بنسب 1%–20% تخلٍّ عن الربح
+المفتوح) جودة الخروج مقارنة بالخروج الفعلي، مع تحقق بمونت كارلو واختبار إحصائي مزدوج وفحص
+فرط تخصيص عبر تدريب/تحقق؟
+
+```bash
+python -m src.trailing_stop_main
+```
+
+ينتج `outputs/reports/trailing_stop_report_arabic.md`، وبيانات `outputs/data/trailing_stop_*.csv`،
+ورسومًا `outputs/figures/trailing_stop_*.png`.
+
+| المسار | الوصف |
+|---|---|
+| `src/trailing_stop_simulation.py` | محاكاة الخروج الافتراضي بوقف متحرك، شمعة بشمعة، بدون تسريب مستقبلي |
+| `src/trailing_stop_metrics.py` | جدول شبكة النسب الكامل (PF، عائد متوقع، Sharpe، أقصى تراجع) |
+| `src/trailing_stop_monte_carlo.py` | Bootstrap لأفضل 3 إعدادات وفترات ثقة معامل الربح |
+| `src/trailing_stop_significance.py` | اختبار t مزدوج و Cohen's d مقابل الأصلي |
+| `src/trailing_stop_monthly.py` | مقارنة الربح/الخسارة الشهرية |
+| `src/trailing_stop_validation.py` | فحص فرط التخصيص عبر تقسيم تدريب/تحقق زمني |
+| `src/trailing_stop_regime.py` | اعتماد أفضل إعداد على نظام السوق (اتجاه/تقلب) |
+| `src/trailing_stop_visualizations.py` / `trailing_stop_reporting.py` / `trailing_stop_main.py` | الرسوم، التقرير النهائي، والتنسيق |
+
+## اكتشاف الأنماط الخفية + تحسين الخروج حسب نظام الدخول — تحليل افتراضي منفصل
+
+اختبار "ماذا لو" ثانٍ، منفصل تمامًا وغير معتمِد على تحليل الوقف المتحرك أعلاه (انظر
+`hidden-patterns-exit-optimization-prompt.md`): هل جودة الخروج المثلى تعتمد على سياق الدخول
+(نظام السوق، شكل الشموع، إلخ)؟ يكتشف أنماطًا خفية بالتجميع (K-means) على ميزات ما-قبل-الدخول
+حصرًا، يختبر 19 استراتيجية خروج لكل نمط (هدف ربح ثابت، وقف متحرك، خروج زمني، جني أرباح جزئي،
+وقف متكيّف مع MFE)، ثم يبني استراتيجية هجينة حسب النمط ويقارنها بأفضل استراتيجية عامة واحدة،
+مع تحقق بمونت كارلو وتدريب/تحقق زمني معزول.
+
+```bash
+python -m src.hidden_pattern_main
+```
+
+ينتج `outputs/reports/hidden_pattern_report_arabic.md`، وبيانات `outputs/data/hidden_pattern_*.csv`،
+ورسومًا `outputs/figures/hidden_pattern_*.png`.
+
+| المسار | الوصف |
+|---|---|
+| `src/hidden_pattern_features.py` | ميزات سياق الدخول (تجميع) + سرعة الربح بعد الدخول (وصفي فقط) |
+| `src/hidden_pattern_clustering.py` | تجميع K-means قابل لإعادة الاستخدام على بيانات تدريب/تحقق |
+| `src/exit_strategy_simulation.py` | محاكاة موحَّدة شمعة بشمعة لكل استراتيجيات الخروج (19 استراتيجية) |
+| `src/exit_strategy_metrics.py` | جدول أداء كل استراتيجية داخل كل نمط، وأفضل استراتيجية عامة |
+| `src/exit_strategy_monte_carlo.py` | Bootstrap لكل نمط + اختبار إجهاد بخلط ترتيب الصفقات |
+| `src/hybrid_strategy.py` | الاستراتيجية الهجينة مقابل الأصلي ومقابل أفضل استراتيجية عامة واحدة |
+| `src/hidden_pattern_monthly.py` | مقارنة شهرية/سنوية وملف التراجع |
+| `src/hidden_pattern_validation.py` | تحقق تدريب/تحقق زمني معزول (بدون تسريب بين الفترتين) |
+| `src/hidden_pattern_visualizations.py` / `hidden_pattern_reporting.py` / `hidden_pattern_main.py` | الرسوم، التقرير النهائي، والتنسيق |
+
+## اختبار "بلا وقف خسارة" (No Stop-Loss) — تحليل افتراضي منفصل
+
+سؤال مباشر: لو أُزيل وقف الخسارة (`initalSL`) تمامًا وتُركت الصفقة تتحرك حرة، ماذا كان سيحدث؟
+منفصل تمامًا عن التحليلين أعلاه ولا يعدّل أي بيانات أصلية: محاكاة شمعة-بشمعة لكل صفقة بلا وقف حتى
+مهلة 30 يومًا، مع تتبّع أسوأ نقطة وصلتها الصفقة (وليس فقط النتيجة النهائية)، اختبار إحصائي مزدوج
+(t-test و Wilcoxon)، وتحقق بمونت كارلو على مستوى الحساب ككل وحساسية ترتيب الصفقات.
+
+```bash
+python -m src.no_stop_main
+```
+
+ينتج `outputs/reports/no_stop_report_arabic.md`، وبيانات `outputs/data/no_stop_*.csv`،
+ورسومًا `outputs/figures/no_stop_*.png`.
+
+| المسار | الوصف |
+|---|---|
+| `src/no_stop_simulation.py` | محاكاة الرحلة بلا وقف خسارة، شمعة بشمعة، بدون تسريب مستقبلي |
+| `src/no_stop_metrics.py` | مقارنة مع/بدون وقف: متوسط، وسيط، PF، أقصى تراجع، مخاطر الذيل |
+| `src/no_stop_monte_carlo.py` | اختبار مزدوج (t-test + Wilcoxon)، Bootstrap للأثر على الحساب، حساسية ترتيب الصفقات |
+| `src/no_stop_visualizations.py` / `no_stop_reporting.py` / `no_stop_main.py` | الرسوم، التقرير النهائي، والتنسيق |
+
+**خلاصة سريعة**: إزالة الوقف كانت لتحسّن نصف الصفقات المتوقفة تقريبًا (كانت لتتعافى وتربح)، لكنها تعرّض
+الحساب لخسارة كارثية غير محدودة في عدد قليل من الصفقات (أسوأها -407R) — التفاصيل الكاملة في التقرير.
+
+## اختبار "الهدف أو الوقف بدون تدخّل" (Target-or-Stop) — تحليل افتراضي منفصل
+
+سؤال متابعة مباشر: لو تُركت الصفقة (بنفس الدخول ووقف الخسارة الأصلي) بدون أي خروج يدوي مبكر أو تحريك
+وقف، حتى تلمس فعليًا الهدف (`idealTP`) أو الوقف — هل كان الأداء ليختلف عن الخروج الفعلي؟ لا يبني محاكاة
+جديدة، بل يُبرز مقارنة محدَّدة من محرك `exit_strategy_simulation.py` الموجود مسبقًا (استراتيجية
+`fixed_tp_idealTP` التي تُبقي وقف الخسارة الأصلي فعّالًا طوال الوقت)، مع اختبار إحصائي مزدوج وتحقق
+بمونت كارلو مخصَّصين لهذه المقارنة تحديدًا.
+
+```bash
+python -m src.target_or_stop_main
+```
+
+ينتج `outputs/reports/target_or_stop_report_arabic.md`، وبيانات `outputs/data/target_or_stop_*.csv`،
+ورسومًا `outputs/figures/target_or_stop_*.png`.
+
+| المسار | الوصف |
+|---|---|
+| `src/target_or_stop_significance.py` | اختبار مزدوج (t-test + Wilcoxon) بين الخروج الفعلي و`fixed_tp_idealTP` |
+| `src/target_or_stop_monte_carlo.py` | Bootstrap مزدوج لفترة ثقة معامل الربح |
+| `src/target_or_stop_visualizations.py` / `target_or_stop_reporting.py` / `target_or_stop_main.py` | الرسوم، التقرير النهائي، والتنسيق |
+
+**خلاصة سريعة**: معامل الربح يتضاعف تقريبًا (1.18 ← 2.42) بدلالة إحصائية قوية جدًا (p≈9×10⁻²⁶) وتأكيد
+Monte Carlo بنسبة 100%. **تحفّظ جوهري**: `idealTP` أفضل سعر تحقّق بأثر رجعي وليس هدفًا كان معروفًا مسبقًا
+— التفاصيل والتفسير الصحيح في التقرير.
+
 ## ملاحظات
 
 - `nasdaq_m1_2020_2024.parquet` بحجم ~51MB مخزَّن مباشرة في git (وليس عبر Git LFS — تم تجربة ذلك ثم التراجع عنه بسبب تجاوز حصة LFS المجانية على GitHub).
