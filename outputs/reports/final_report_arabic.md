@@ -11,18 +11,103 @@
 
 ## أقوى المرشَّحات الناجية (مرتّبة حسب Robustness Score)
 
-| الشرط (أعمدة/قيم إنجليزية) | الاتجاه | العيّنة n | العائد المتوقع (R) | معدل الفوز | p (FDR) | مونت كارلو | ثبات الحدود | اعتماد النظام | الفئة | Robustness Score |
-|---|---|---|---|---|---|---|---|---|---|---|
-| `day_of_week=3 & pre_entry_pct_up_candles_15m_bin=(0.467, 0.533]` | سلبي (تجنّب) | 37 | -0.595 | 8.1% | 0.073 | survives_monte_carlo | stable | holds_across_regimes_tested | exploratory | 89.1 |
-| `day_of_week=2 & pct_dist_from_low_20d_bin=(0.557, 0.864]` | سلبي (تجنّب) | 50 | -0.455 | 10.0% | 0.403 | survives_monte_carlo | stable | holds_across_regimes_tested | exploratory | 78.3 |
-| `day_of_week=2 & pct_dist_from_high_20d_bin=(0.136, 0.443]` | سلبي (تجنّب) | 50 | -0.455 | 10.0% | 0.403 | survives_monte_carlo | stable | holds_across_regimes_tested | exploratory | 78.3 |
-| `regime_vol_asof_prior_day=Low Vol & pre_entry_pct_up_candles_15m_bin=(0.467, 0.533]` | سلبي (تجنّب) | 75 | -0.385 | 14.7% | 0.381 | survives_monte_carlo | stable | holds_across_regimes_tested | exploratory | 74.5 |
-| `day_of_week=1 & pre_entry_momentum_30m_bin=(-0.0016, 0.000893]` | إيجابي | 48 | 0.694 | 39.6% | 1.000 | survives_monte_carlo | stable | holds_across_regimes_tested | exploratory | 69.8 |
-| `pct_dist_from_high_20d_bin=(-0.136, 0.136] & pre_entry_momentum_5m_bin=(0.000459, 0.00899]` | إيجابي | 86 | 0.514 | 40.7% | 1.000 | survives_monte_carlo | stable | holds_across_regimes_tested | exploratory | 68.6 |
-| `pct_dist_from_low_20d_bin=(0.864, 1.135] & pre_entry_momentum_5m_bin=(0.000459, 0.00899]` | إيجابي | 86 | 0.514 | 40.7% | 1.000 | survives_monte_carlo | stable | holds_across_regimes_tested | exploratory | 68.6 |
-| `day_of_week=1 & regime_trend_asof_prior_day=Range` | إيجابي | 87 | 0.554 | 39.1% | 1.000 | survives_monte_carlo | n/a (categorical-only condition) | holds_across_regimes_tested | exploratory | 62.3 |
-| `side=sell & day_of_week=1` | إيجابي | 76 | 0.583 | 40.8% | 1.000 | survives_monte_carlo | n/a (categorical-only condition) | holds_across_regimes_tested | exploratory | 62.0 |
-| `pct_dist_from_high_20d_bin=(-0.136, 0.136] & pre_entry_momentum_30m_bin=(-0.0016, 0.000893]` | إيجابي | 112 | 0.492 | 41.1% | 1.000 | survives_monte_carlo | stable | holds_across_regimes_tested | exploratory | 59.5 |
+| الشرط (أعمدة/قيم إنجليزية) | الاتجاه | العيّنة n | العائد المتوقع (R) | معدل الفوز | PF | p (FDR) | مونت كارلو | ثبات الحدود | اعتماد النظام | الفئة | Robustness Score |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| `day_of_week=3 & pre_entry_pct_up_candles_15m_bin=(0.467, 0.533]` | سلبي (تجنّب) | 37 | -0.595 | 8.1% | 0.21 | 0.073 | survives_monte_carlo | stable | holds_across_regimes_tested | exploratory | 89.1 |
+| `day_of_week=2 & pct_dist_from_low_20d_bin=(0.557, 0.864]` | سلبي (تجنّب) | 50 | -0.455 | 10.0% | 0.37 | 0.403 | survives_monte_carlo | stable | holds_across_regimes_tested | exploratory | 78.3 |
+| `day_of_week=2 & pct_dist_from_high_20d_bin=(0.136, 0.443]` | سلبي (تجنّب) | 50 | -0.455 | 10.0% | 0.37 | 0.403 | survives_monte_carlo | stable | holds_across_regimes_tested | exploratory | 78.3 |
+| `regime_vol_asof_prior_day=Low Vol & pre_entry_pct_up_candles_15m_bin=(0.467, 0.533]` | سلبي (تجنّب) | 75 | -0.385 | 14.7% | 0.44 | 0.381 | survives_monte_carlo | stable | holds_across_regimes_tested | exploratory | 74.5 |
+| `day_of_week=1 & pre_entry_momentum_30m_bin=(-0.0016, 0.000893]` | إيجابي | 48 | 0.694 | 39.6% | 2.67 | 1.000 | survives_monte_carlo | stable | holds_across_regimes_tested | exploratory | 69.8 |
+| `pct_dist_from_high_20d_bin=(-0.136, 0.136] & pre_entry_momentum_5m_bin=(0.000459, 0.00899]` | إيجابي | 86 | 0.514 | 40.7% | 1.99 | 1.000 | survives_monte_carlo | stable | holds_across_regimes_tested | exploratory | 68.6 |
+| `pct_dist_from_low_20d_bin=(0.864, 1.135] & pre_entry_momentum_5m_bin=(0.000459, 0.00899]` | إيجابي | 86 | 0.514 | 40.7% | 1.99 | 1.000 | survives_monte_carlo | stable | holds_across_regimes_tested | exploratory | 68.6 |
+| `day_of_week=1 & regime_trend_asof_prior_day=Range` | إيجابي | 87 | 0.554 | 39.1% | 2.07 | 1.000 | survives_monte_carlo | n/a (categorical-only condition) | holds_across_regimes_tested | exploratory | 62.3 |
+| `side=sell & day_of_week=1` | إيجابي | 76 | 0.583 | 40.8% | 2.20 | 1.000 | survives_monte_carlo | n/a (categorical-only condition) | holds_across_regimes_tested | exploratory | 62.0 |
+| `pct_dist_from_high_20d_bin=(-0.136, 0.136] & pre_entry_momentum_30m_bin=(-0.0016, 0.000893]` | إيجابي | 112 | 0.492 | 41.1% | 2.00 | 1.000 | survives_monte_carlo | stable | holds_across_regimes_tested | exploratory | 59.5 |
+
+### صحيفة إحصائية كاملة لكل نمط من العشرة الأوائل
+
+لكل نمط أدناه: العيّنة، الأدلة البايزية (متوسط معدل الفوز اللاحق مع فترة المصداقية 95%، و Bayes Factor مقابل المعدل الأساسي)، وأداء كل سنة اختبار في walk-forward على حدة.
+
+**1. `day_of_week=3 & pre_entry_pct_up_candles_15m_bin=(0.467, 0.533]`** (الفئة: exploratory، Robustness Score=89.1)
+
+- العيّنة n=37، العائد المتوقع=-0.595R، معدل الفوز=8.1%، PF=0.21، p الخام=0.0001، p بعد FDR=0.0735
+- الأدلة البايزية: معدل فوز لاحق متوقَّع=10.3% (فترة مصداقية 95%: 2.9%–21.4%)، Bayes Factor=7.62 (substantial)
+- مونت كارلو: survives_monte_carlo (احتمال انقلاب الاتجاه=0.1%)؛ ثبات الحدود: stable؛ اعتماد النظام السوقي: holds_across_regimes_tested
+
+- walk-forward لكل سنة: 2021: n=9, عائد=-0.842R | 2022: n=10, عائد=-0.800R | 2023: n=8, عائد=-0.750R | 2024: n=5, عائد=-0.600R
+
+**2. `day_of_week=2 & pct_dist_from_low_20d_bin=(0.557, 0.864]`** (الفئة: exploratory، Robustness Score=78.3)
+
+- العيّنة n=50، العائد المتوقع=-0.455R، معدل الفوز=10.0%، PF=0.37، p الخام=0.0017، p بعد FDR=0.4032
+- الأدلة البايزية: معدل فوز لاحق متوقَّع=11.5% (فترة مصداقية 95%: 4.4%–21.4%)، Bayes Factor=9.11 (substantial)
+- مونت كارلو: survives_monte_carlo (احتمال انقلاب الاتجاه=0.7%)؛ ثبات الحدود: stable؛ اعتماد النظام السوقي: holds_across_regimes_tested
+
+- walk-forward لكل سنة: 2021: n=12, عائد=-0.557R | 2022: n=9, عائد=-0.694R | 2023: n=8, عائد=-0.128R | 2024: n=13, عائد=-0.509R
+
+**3. `day_of_week=2 & pct_dist_from_high_20d_bin=(0.136, 0.443]`** (الفئة: exploratory، Robustness Score=78.3)
+
+- العيّنة n=50، العائد المتوقع=-0.455R، معدل الفوز=10.0%، PF=0.37، p الخام=0.0017، p بعد FDR=0.4032
+- الأدلة البايزية: معدل فوز لاحق متوقَّع=11.5% (فترة مصداقية 95%: 4.4%–21.4%)، Bayes Factor=9.11 (substantial)
+- مونت كارلو: survives_monte_carlo (احتمال انقلاب الاتجاه=0.7%)؛ ثبات الحدود: stable؛ اعتماد النظام السوقي: holds_across_regimes_tested
+
+- walk-forward لكل سنة: 2021: n=12, عائد=-0.557R | 2022: n=9, عائد=-0.694R | 2023: n=8, عائد=-0.128R | 2024: n=13, عائد=-0.509R
+
+**4. `regime_vol_asof_prior_day=Low Vol & pre_entry_pct_up_candles_15m_bin=(0.467, 0.533]`** (الفئة: exploratory، Robustness Score=74.5)
+
+- العيّنة n=75، العائد المتوقع=-0.385R، معدل الفوز=14.7%، PF=0.44، p الخام=0.0008، p بعد FDR=0.3807
+- الأدلة البايزية: معدل فوز لاحق متوقَّع=15.6% (فترة مصداقية 95%: 8.4%–24.4%)، Bayes Factor=2.70 (barely worth mentioning)
+- مونت كارلو: survives_monte_carlo (احتمال انقلاب الاتجاه=0.4%)؛ ثبات الحدود: stable؛ اعتماد النظام السوقي: holds_across_regimes_tested
+
+- walk-forward لكل سنة: 2021: n=17, عائد=-0.461R | 2022: n=2, عائد=1.065R | 2023: n=30, عائد=-0.458R | 2024: n=12, عائد=-0.203R
+
+**5. `day_of_week=1 & pre_entry_momentum_30m_bin=(-0.0016, 0.000893]`** (الفئة: exploratory، Robustness Score=69.8)
+
+- العيّنة n=48، العائد المتوقع=0.694R، معدل الفوز=39.6%، PF=2.67، p الخام=0.0346، p بعد FDR=1.0000
+- الأدلة البايزية: معدل فوز لاحق متوقَّع=40.0% (فترة مصداقية 95%: 27.0%–53.8%)، Bayes Factor=1.04 (barely worth mentioning)
+- مونت كارلو: survives_monte_carlo (احتمال انقلاب الاتجاه=0.3%)؛ ثبات الحدود: stable؛ اعتماد النظام السوقي: holds_across_regimes_tested
+
+- walk-forward لكل سنة: 2021: n=10, عائد=1.446R | 2022: n=3, عائد=0.093R | 2023: n=8, عائد=0.259R | 2024: n=17, عائد=1.262R
+
+**6. `pct_dist_from_high_20d_bin=(-0.136, 0.136] & pre_entry_momentum_5m_bin=(0.000459, 0.00899]`** (الفئة: exploratory، Robustness Score=68.6)
+
+- العيّنة n=86، العائد المتوقع=0.514R، معدل الفوز=40.7%، PF=1.99، p الخام=0.0477، p بعد FDR=1.0000
+- الأدلة البايزية: معدل فوز لاحق متوقَّع=40.9% (فترة مصداقية 95%: 30.9%–51.3%)، Bayes Factor=5.69 (substantial)
+- مونت كارلو: survives_monte_carlo (احتمال انقلاب الاتجاه=0.3%)؛ ثبات الحدود: stable؛ اعتماد النظام السوقي: holds_across_regimes_tested
+
+- walk-forward لكل سنة: 2021: n=16, عائد=0.694R | 2022: n=11, عائد=0.038R | 2023: n=19, عائد=0.223R | 2024: n=12, عائد=0.464R
+
+**7. `pct_dist_from_low_20d_bin=(0.864, 1.135] & pre_entry_momentum_5m_bin=(0.000459, 0.00899]`** (الفئة: exploratory، Robustness Score=68.6)
+
+- العيّنة n=86، العائد المتوقع=0.514R، معدل الفوز=40.7%، PF=1.99، p الخام=0.0477، p بعد FDR=1.0000
+- الأدلة البايزية: معدل فوز لاحق متوقَّع=40.9% (فترة مصداقية 95%: 30.9%–51.3%)، Bayes Factor=5.69 (substantial)
+- مونت كارلو: survives_monte_carlo (احتمال انقلاب الاتجاه=0.3%)؛ ثبات الحدود: stable؛ اعتماد النظام السوقي: holds_across_regimes_tested
+
+- walk-forward لكل سنة: 2021: n=16, عائد=0.694R | 2022: n=11, عائد=0.038R | 2023: n=19, عائد=0.223R | 2024: n=12, عائد=0.464R
+
+**8. `day_of_week=1 & regime_trend_asof_prior_day=Range`** (الفئة: exploratory، Robustness Score=62.3)
+
+- العيّنة n=87، العائد المتوقع=0.554R، معدل الفوز=39.1%، PF=2.07، p الخام=0.0326، p بعد FDR=1.0000
+- الأدلة البايزية: معدل فوز لاحق متوقَّع=39.3% (فترة مصداقية 95%: 29.5%–49.6%)، Bayes Factor=2.58 (barely worth mentioning)
+- مونت كارلو: survives_monte_carlo (احتمال انقلاب الاتجاه=0.2%)؛ ثبات الحدود: n/a (categorical-only condition)؛ اعتماد النظام السوقي: holds_across_regimes_tested
+
+- walk-forward لكل سنة: 2021: n=13, عائد=0.962R | 2022: n=21, عائد=0.463R | 2023: n=19, عائد=0.399R | 2024: n=21, عائد=0.976R
+
+**9. `side=sell & day_of_week=1`** (الفئة: exploratory، Robustness Score=62.0)
+
+- العيّنة n=76، العائد المتوقع=0.583R، معدل الفوز=40.8%، PF=2.20، p الخام=0.0306، p بعد FDR=1.0000
+- الأدلة البايزية: معدل فوز لاحق متوقَّع=41.0% (فترة مصداقية 95%: 30.4%–52.1%)، Bayes Factor=4.07 (substantial)
+- مونت كارلو: survives_monte_carlo (احتمال انقلاب الاتجاه=0.2%)؛ ثبات الحدود: n/a (categorical-only condition)؛ اعتماد النظام السوقي: holds_across_regimes_tested
+
+- walk-forward لكل سنة: 2021: n=8, عائد=1.400R | 2022: n=17, عائد=0.551R | 2023: n=15, عائد=0.399R | 2024: n=18, عائد=1.257R
+
+**10. `pct_dist_from_high_20d_bin=(-0.136, 0.136] & pre_entry_momentum_30m_bin=(-0.0016, 0.000893]`** (الفئة: exploratory، Robustness Score=59.5)
+
+- العيّنة n=112، العائد المتوقع=0.492R، معدل الفوز=41.1%، PF=2.00، p الخام=0.0286، p بعد FDR=1.0000
+- الأدلة البايزية: معدل فوز لاحق متوقَّع=41.2% (فترة مصداقية 95%: 32.4%–50.4%)، Bayes Factor=20.29 (strong)
+- مونت كارلو: survives_monte_carlo (احتمال انقلاب الاتجاه=0.1%)؛ ثبات الحدود: stable؛ اعتماد النظام السوقي: holds_across_regimes_tested
+
+- walk-forward لكل سنة: 2021: n=32, عائد=0.578R | 2022: n=9, عائد=-0.171R | 2023: n=16, عائد=-0.333R | 2024: n=25, عائد=0.940R
+
 
 ## أنماط إمكانية الربح الكامنة (maxRiskReward)
 
@@ -77,6 +162,16 @@
 | 2024 | 145 | 29.7% | 0.176 | 1.308 |
 
 اختبار الاتجاه على مستوى تسلسل الصفقات (وهو أقوى إحصائيًا من الاعتماد على 5 نقاط سنوية فقط) لم يبلغ العتبة المعتادة للدلالة (p=0.092 > 0.05)، رغم إشارة ضعيفة نحو التراجع (rho=-0.060). الخلاصة: **لا يوجد دليل كافٍ حتى الآن على تراجع منهجي في الحافة** — الانخفاض في 2023 لا يمكن تمييزه إحصائيًا عن تقلب طبيعي بين السنوات.
+
+**متى تغيّر أداء الاستراتيجية فعليًا (نقاط تحوّل على منحنى الأداء)**: رصد CUSUM على العائد المتحرك (نافذة 20 صفقة) **17** نقطة تحوّل محتملة عبر 5 سنوات. الأهم: هل هذه التحوّلات تتزامن مع تغيّر حقيقي في طبيعة السوق (تقلب/اتجاه) نفسه، أم أنها خاصة بالاستراتيجية فقط؟
+
+من أصل 17 نقطة تحوّل في الأداء، **8** منها (±30 يومًا) تزامنت مع نقطة تحوّل في تقلب السوق نفسه (مقاسة من ATR). أول 3 أمثلة:
+
+- 2020-03-20: تزامن مع تحوّل سوقي؟ نعم (أقرب نقاط سوقية: 2020-03-09 00:00:00, 2020-04-06 00:00:00)
+- 2020-05-28: تزامن مع تحوّل سوقي؟ لا (أقرب نقاط سوقية: لا يوجد)
+- 2020-10-06: تزامن مع تحوّل سوقي؟ لا (أقرب نقاط سوقية: لا يوجد)
+
+بما أن أقل من نصف نقاط تحوّل الأداء (≈47%) تتزامن مع تحوّلات في طبيعة السوق، فإن جزءًا من تقلبات الأداء **قد يعود لعوامل خاصة بالاستراتيجية نفسها** وليس فقط ظروف السوق العامة — ملاحظة وصفية تستحق متابعة أعمق، وليست دليلًا حاسمًا.
 
 ## جودة الخروج (Exit Quality)
 

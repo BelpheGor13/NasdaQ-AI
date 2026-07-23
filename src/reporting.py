@@ -56,15 +56,46 @@ def build_report(results: dict) -> str:
         lines.append("لم تنتج عملية البحث أي مرشَّحات ضمن الحد الأدنى للعيّنة.\n")
     else:
         lines.append("| الشرط (أعمدة/قيم إنجليزية) | الاتجاه | العيّنة n | العائد المتوقع (R) | معدل الفوز | "
-                     "p (FDR) | مونت كارلو | ثبات الحدود | اعتماد النظام | الفئة | Robustness Score |")
-        lines.append("|---|---|---|---|---|---|---|---|---|---|---|")
+                     "PF | p (FDR) | مونت كارلو | ثبات الحدود | اعتماد النظام | الفئة | Robustness Score |")
+        lines.append("|---|---|---|---|---|---|---|---|---|---|---|---|")
         for _, r in top_scored.head(10).iterrows():
+            pf = r["profit_factor"]
+            pf_str = "∞" if pf == float("inf") else _fmt(pf, 2)
             lines.append(
                 f"| `{r['condition']}` | {'إيجابي' if 'positive' in r['direction'] else 'سلبي (تجنّب)'} "
-                f"| {r['n']} | {_fmt(r['expectancy'])} | {_fmt_pct(r['win_rate'])} | {_fmt(r['p_fdr_bh'])} "
+                f"| {r['n']} | {_fmt(r['expectancy'])} | {_fmt_pct(r['win_rate'])} | {pf_str} | {_fmt(r['p_fdr_bh'])} "
                 f"| {r['mc_verdict']} | {r['stability_verdict']} | {r['regime_verdict']} "
                 f"| {r['confidence_tier']} | {_fmt(r['robustness_score'], 1)} |"
             )
+        lines.append("")
+
+        lines.append("### صحيفة إحصائية كاملة لكل نمط من العشرة الأوائل\n")
+        lines.append(
+            "لكل نمط أدناه: العيّنة، الأدلة البايزية (متوسط معدل الفوز اللاحق مع فترة المصداقية 95%، "
+            "و Bayes Factor مقابل المعدل الأساسي)، وأداء كل سنة اختبار في walk-forward على حدة.\n"
+        )
+        fold_details = results.get("fold_details", {})
+        for i, (_, r) in enumerate(top_scored.head(10).iterrows(), start=1):
+            pf = r["profit_factor"]
+            pf_str = "∞" if pf == float("inf") else _fmt(pf, 2)
+            lines.append(f"**{i}. `{r['condition']}`** (الفئة: {r['confidence_tier']}، Robustness Score={_fmt(r['robustness_score'], 1)})\n")
+            lines.append(
+                f"- العيّنة n={r['n']}، العائد المتوقع={_fmt(r['expectancy'])}R، معدل الفوز={_fmt_pct(r['win_rate'])}، "
+                f"PF={pf_str}، p الخام={_fmt(r['p_value_expectancy'], 4)}، p بعد FDR={_fmt(r['p_fdr_bh'], 4)}\n"
+                f"- الأدلة البايزية: معدل فوز لاحق متوقَّع={_fmt_pct(r['posterior_win_rate_mean'])} "
+                f"(فترة مصداقية 95%: {_fmt_pct(r['posterior_win_rate_ci_lo'])}–{_fmt_pct(r['posterior_win_rate_ci_hi'])})، "
+                f"Bayes Factor={_fmt(r['bayes_factor_vs_base_rate'], 2)} ({r['bayes_evidence']})\n"
+                f"- مونت كارلو: {r['mc_verdict']} (احتمال انقلاب الاتجاه={_fmt_pct(r['prob_sign_flip'])})؛ "
+                f"ثبات الحدود: {r['stability_verdict']}؛ اعتماد النظام السوقي: {r['regime_verdict']}\n"
+            )
+            fold_df = fold_details.get(r["condition"])
+            if fold_df is not None and len(fold_df):
+                fold_strs = []
+                for _, fr in fold_df.iterrows():
+                    n_fold = int(fr["n"]) if fr["n"] == fr["n"] else 0
+                    exp_fold = _fmt(fr["expectancy"]) if fr["expectancy"] == fr["expectancy"] else "لا بيانات"
+                    fold_strs.append(f"{int(fr['fold'])}: n={n_fold}, عائد={exp_fold}R")
+                lines.append(f"- walk-forward لكل سنة: {' | '.join(fold_strs)}\n")
         lines.append("")
 
     lines.append("## أنماط إمكانية الربح الكامنة (maxRiskReward)\n")
@@ -156,6 +187,37 @@ def build_report(results: dict) -> str:
         f"(rho={trend['spearman_rho']:.3f}). الخلاصة: **لا يوجد دليل كافٍ حتى الآن على تراجع منهجي في الحافة** "
         f"— الانخفاض في 2023 لا يمكن تمييزه إحصائيًا عن تقلب طبيعي بين السنوات.\n"
     )
+
+    eq_cps = results.get("equity_change_points", [])
+    ties = results.get("decay_regime_ties", [])
+    if eq_cps:
+        lines.append(
+            f"**متى تغيّر أداء الاستراتيجية فعليًا (نقاط تحوّل على منحنى الأداء)**: رصد CUSUM على العائد "
+            f"المتحرك (نافذة 20 صفقة) **{len(eq_cps)}** نقطة تحوّل محتملة عبر 5 سنوات. الأهم: هل هذه التحوّلات "
+            f"تتزامن مع تغيّر حقيقي في طبيعة السوق (تقلب/اتجاه) نفسه، أم أنها خاصة بالاستراتيجية فقط؟\n"
+        )
+        n_coincide = sum(1 for t in ties if t["coincides_with_regime_shift"])
+        lines.append(
+            f"من أصل {len(ties)} نقطة تحوّل في الأداء، **{n_coincide}** منها (±30 يومًا) تزامنت مع نقطة تحوّل "
+            f"في تقلب السوق نفسه (مقاسة من ATR). أول 3 أمثلة:\n"
+        )
+        for t in ties[:3]:
+            nearby = ", ".join(str(d) for d in t["nearby_regime_change_points"]) or "لا يوجد"
+            lines.append(f"- {t['equity_change_point'].date()}: تزامن مع تحوّل سوقي؟ "
+                         f"{'نعم' if t['coincides_with_regime_shift'] else 'لا'} (أقرب نقاط سوقية: {nearby})")
+        pct_coincide = n_coincide / len(ties) if ties else 0
+        if pct_coincide >= 0.5:
+            lines.append(
+                f"\nبما أن أغلب نقاط تحوّل الأداء (≈{pct_coincide*100:.0f}%) تتزامن مع تحوّلات حقيقية في طبيعة "
+                f"السوق، فإن تقلبات الأداء تبدو **مرتبطة بتغيّر ظروف السوق أكثر من كونها خللًا داخليًا في "
+                f"الاستراتيجية نفسها** — لكن هذا لا يزال ملاحظة وصفية، وليس اختبارًا سببيًا.\n"
+            )
+        else:
+            lines.append(
+                f"\nبما أن أقل من نصف نقاط تحوّل الأداء (≈{pct_coincide*100:.0f}%) تتزامن مع تحوّلات في طبيعة "
+                f"السوق، فإن جزءًا من تقلبات الأداء **قد يعود لعوامل خاصة بالاستراتيجية نفسها** وليس فقط ظروف "
+                f"السوق العامة — ملاحظة وصفية تستحق متابعة أعمق، وليست دليلًا حاسمًا.\n"
+            )
 
     lines.append("## جودة الخروج (Exit Quality)\n")
     lines.append("توزيع تصنيف جودة الخروج عبر جميع الصفقات:\n")

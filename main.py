@@ -77,7 +77,7 @@ def main():
     feats = feature_engineering.build_features(trades, candles)
     # carry exit-quality columns forward for reference in outputs (descriptive only)
     feats = feats.merge(
-        exit_q[["id", "exit_quality", "exit_efficiency", "left_on_table_r", "left_on_table_usd"]],
+        exit_q[["id", "exit_quality", "exit_efficiency", "left_on_table_r", "left_on_table_usd", "mfe_r", "mae_r"]],
         on="id", how="left",
     )
 
@@ -135,13 +135,19 @@ def main():
     visualizations.plot_mfe_mae_scatter(exit_q)
     visualizations.plot_win_rate_vs_base_rate(scored, base_win_rate)
     visualizations.plot_yearly_edge_decay(yearly)
-    if len(scored):
-        top_row = scored.iloc[0]
-        disc = pattern_search.discretize(feats)
-        mask = pattern_search.apply_condition(disc, top_row["condition_dict"])
-        top_vals = disc.loc[mask, TARGET_COL].dropna().values
-        visualizations.plot_monte_carlo_distribution(top_vals)
-        visualizations.plot_walk_forward_folds(top_row["condition"], fold_details[top_row["condition"]])
+
+    # Per-pattern visuals (entry conditions, pattern-specific MFE/MAE,
+    # Monte Carlo distribution, walk-forward folds) for the top 3 ranked
+    # patterns, not just #1 -- spec asks for these "for top confirmed
+    # patterns" (plural).
+    disc = pattern_search.discretize(feats)
+    for rank, (_, row) in enumerate(scored.head(3).iterrows(), start=1):
+        mask = pattern_search.apply_condition(disc, row["condition_dict"])
+        vals = disc.loc[mask, TARGET_COL].dropna().values
+        visualizations.plot_entry_conditions(feats, row["condition_dict"], rank=rank, condition_label=row["condition"])
+        visualizations.plot_mfe_mae_for_pattern(feats, mask, rank=rank, condition_label=row["condition"])
+        visualizations.plot_monte_carlo_distribution(vals, rank=rank)
+        visualizations.plot_walk_forward_folds(row["condition"], fold_details[row["condition"]], rank=rank)
 
     results = {
         "profile": profile,
@@ -160,6 +166,10 @@ def main():
         "cross_ref": cross_ref,
         "shap_features": shap_features,
         "shap_guided_scored": shap_scored,
+        "equity_change_points": eq_cps,
+        "regime_change_points": regime_cps,
+        "decay_regime_ties": ties,
+        "fold_details": fold_details,
     }
 
     report_text = reporting.build_report(results)
