@@ -14,8 +14,10 @@ import pandas as pd
 from src import pattern_search, stats_utils
 
 
-def add_bayesian_evidence(df: pd.DataFrame, candidates: pd.DataFrame, target_col: str) -> pd.DataFrame:
-    disc = pattern_search.discretize(df)
+def add_bayesian_evidence(df: pd.DataFrame, candidates: pd.DataFrame, target_col: str,
+                           extra_continuous_features: list = None) -> pd.DataFrame:
+    disc = pattern_search.discretize(df, continuous_features=(
+        pattern_search.CONTINUOUS_FEATURES + (extra_continuous_features or [])))
     base_vals = disc[target_col].dropna().values
     base_win_rate = float((base_vals > 0).mean())
 

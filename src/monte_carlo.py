@@ -100,8 +100,10 @@ def _verdict(mc: dict) -> str:
     return "survives_monte_carlo"
 
 
-def run_mc_for_candidates(df: pd.DataFrame, candidates: pd.DataFrame, target_col: str) -> pd.DataFrame:
-    disc = pattern_search.discretize(df)
+def run_mc_for_candidates(df: pd.DataFrame, candidates: pd.DataFrame, target_col: str,
+                           extra_continuous_features: list = None) -> pd.DataFrame:
+    disc = pattern_search.discretize(df, continuous_features=(
+        pattern_search.CONTINUOUS_FEATURES + (extra_continuous_features or [])))
     mc_rows = [evaluate_pattern_mc(disc, row["condition_dict"], target_col) for _, row in candidates.iterrows()]
     mc_df = pd.DataFrame(mc_rows, index=candidates.index)
     return pd.concat([candidates, mc_df], axis=1)

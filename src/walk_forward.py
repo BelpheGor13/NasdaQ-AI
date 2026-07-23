@@ -62,11 +62,14 @@ def summarize_stability(fold_df: pd.DataFrame) -> dict:
 
 
 def run_walk_forward_for_candidates(df: pd.DataFrame, candidates: pd.DataFrame, target_col: str,
-                                     top_n: int = 30) -> pd.DataFrame:
+                                     top_n: int = 30, extra_continuous_features: list = None) -> pd.DataFrame:
     """Runs the per-fold breakdown for the top_n candidates (by raw
-    p-value) and attaches a stability summary to each.
+    p-value) and attaches a stability summary to each. extra_continuous_features
+    must match whatever was passed to pattern_search.search_patterns() when
+    these candidates were generated, so the same _bin columns exist here.
     """
-    disc = pattern_search.discretize(df)
+    disc = pattern_search.discretize(df, continuous_features=(
+        pattern_search.CONTINUOUS_FEATURES + (extra_continuous_features or [])))
     top = candidates.head(top_n).copy()
 
     stability_rows = []

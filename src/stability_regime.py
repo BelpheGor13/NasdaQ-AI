@@ -127,8 +127,10 @@ def regime_conditioned_breakdown(df: pd.DataFrame, condition_dict: dict, target_
     return {"regime_breakdown": breakdown, "regime_dependent_on": concentration_flags, "regime_verdict": verdict}
 
 
-def run_stability_regime_for_candidates(df: pd.DataFrame, candidates: pd.DataFrame, target_col: str) -> pd.DataFrame:
-    disc = pattern_search.discretize(df)
+def run_stability_regime_for_candidates(df: pd.DataFrame, candidates: pd.DataFrame, target_col: str,
+                                         extra_continuous_features: list = None) -> pd.DataFrame:
+    disc = pattern_search.discretize(df, continuous_features=(
+        pattern_search.CONTINUOUS_FEATURES + (extra_continuous_features or [])))
     rows = []
     for _, row in candidates.iterrows():
         stab = threshold_perturbation_stability(disc, row["condition_dict"], target_col)

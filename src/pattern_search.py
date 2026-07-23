@@ -32,9 +32,15 @@ CONTINUOUS_FEATURES = [
 N_QUANTILE_BINS = 3  # tertiles: keeps per-cell sample sizes viable at n=789
 
 
-def discretize(df: pd.DataFrame) -> pd.DataFrame:
+def discretize(df: pd.DataFrame, continuous_features: list = None) -> pd.DataFrame:
+    """continuous_features overrides the module default so external
+    callers (e.g. macro_pattern_search.py) can bin their own feature set
+    without it needing to already be in CONTINUOUS_FEATURES -- that list
+    stays scoped to the core NAS100-internal features it was written for.
+    """
+    continuous_features = continuous_features if continuous_features is not None else CONTINUOUS_FEATURES
     out = df.copy()
-    for col in CONTINUOUS_FEATURES:
+    for col in continuous_features:
         if col not in out.columns:
             continue
         try:
@@ -50,9 +56,12 @@ def discretize(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
-def _condition_columns(df: pd.DataFrame) -> list:
-    cols = [c for c in CATEGORICAL_FEATURES if c in df.columns]
-    cols += [c + "_bin" for c in CONTINUOUS_FEATURES if c + "_bin" in df.columns]
+def _condition_columns(df: pd.DataFrame, categorical_features: list = None,
+                        continuous_features: list = None) -> list:
+    categorical_features = categorical_features if categorical_features is not None else CATEGORICAL_FEATURES
+    continuous_features = continuous_features if continuous_features is not None else CONTINUOUS_FEATURES
+    cols = [c for c in categorical_features if c in df.columns]
+    cols += [c + "_bin" for c in continuous_features if c + "_bin" in df.columns]
     return cols
 
 
@@ -101,16 +110,26 @@ def apply_condition(disc_df: pd.DataFrame, condition_dict: dict) -> pd.Series:
 
 
 def search_patterns(df: pd.DataFrame, target_col: str = "r_multiple", min_n: int = 20,
-                     max_condition_depth: int = 2, restrict_cols: list = None) -> pd.DataFrame:
+                     max_condition_depth: int = 2, restrict_cols: list = None,
+                     extra_categorical_features: list = None, extra_continuous_features: list = None) -> pd.DataFrame:
     """restrict_cols limits the condition space to a specific subset of
     features (raw names, without the "_bin" suffix for continuous ones).
     Used for pre-registered, hypothesis-driven confirmatory tests (e.g. a
     small SHAP-flagged feature set) where correcting across a small family
     of tests is the honest comparison -- not the full ~900-combination
     exploratory search, which is a different, much larger family.
+
+    extra_{categorical,continuous}_features let a caller search a feature
+    set OUTSIDE this module's own CATEGORICAL_FEATURES/CONTINUOUS_FEATURES
+    (e.g. macro_pattern_search.py's external market features) without
+    polluting those core-pipeline lists -- they're unioned in just for
+    this call's discretize()/_condition_columns() pass.
     """
-    disc = discretize(df)
-    cond_cols = _condition_columns(disc)
+    all_categorical = CATEGORICAL_FEATURES + (extra_categorical_features or [])
+    all_continuous = CONTINUOUS_FEATURES + (extra_continuous_features or [])
+
+    disc = discretize(df, continuous_features=all_continuous)
+    cond_cols = _condition_columns(disc, categorical_features=all_categorical, continuous_features=all_continuous)
     if restrict_cols is not None:
         wanted = set(restrict_cols)
         cond_cols = [c for c in cond_cols if c in wanted or c.replace("_bin", "") in wanted]
