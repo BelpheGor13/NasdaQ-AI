@@ -10,8 +10,8 @@ import time
 from src import (
     config, data_loading, excursion, exit_quality, regime_detection,
     feature_engineering, pattern_search, walk_forward, monte_carlo,
-    bayesian_evidence, stability_regime, ml_shap, clustering, edge_decay,
-    scoring, visualizations, reporting,
+    bayesian_evidence, stability_regime, ml_shap, shap_hypothesis_test,
+    clustering, edge_decay, scoring, visualizations, reporting,
 )
 
 TARGET_COL = "r_multiple"
@@ -110,6 +110,14 @@ def main():
     imp_df = ml_shap.run_walk_forward_shap(feats, target_col=TARGET_COL)
     shap_stability = ml_shap.stability_of_top_features(imp_df)
 
+    print("\n[6b/9] SHAP-guided targeted hypothesis test (pre-registered family)...")
+    shap_features = shap_hypothesis_test.select_shap_stable_features(feats)
+    shap_scored, _ = shap_hypothesis_test.run_shap_guided_test(feats, shap_features)
+    shap_scored.drop(columns=["condition_dict", "regime_dependent_on"]).to_csv(
+        config.DATA_OUT / "shap_guided_test.csv", index=False)
+    print(f"  {len(shap_scored)} conditions tested, "
+          f"{int(shap_scored['reject_fdr'].sum())} survive Bonferroni within this small family")
+
     print("\n[7/9] Clustering winners / worst losers / losing streak...")
     clusters = clustering.cluster_winners_and_worst_losers(feats)
 
@@ -150,6 +158,8 @@ def main():
         "n_candidates_tested_potential": n_candidates_tested_pot,
         "n_fdr_survivors_potential": n_fdr_survivors_pot,
         "cross_ref": cross_ref,
+        "shap_features": shap_features,
+        "shap_guided_scored": shap_scored,
     }
 
     report_text = reporting.build_report(results)

@@ -101,9 +101,19 @@ def apply_condition(disc_df: pd.DataFrame, condition_dict: dict) -> pd.Series:
 
 
 def search_patterns(df: pd.DataFrame, target_col: str = "r_multiple", min_n: int = 20,
-                     max_condition_depth: int = 2) -> pd.DataFrame:
+                     max_condition_depth: int = 2, restrict_cols: list = None) -> pd.DataFrame:
+    """restrict_cols limits the condition space to a specific subset of
+    features (raw names, without the "_bin" suffix for continuous ones).
+    Used for pre-registered, hypothesis-driven confirmatory tests (e.g. a
+    small SHAP-flagged feature set) where correcting across a small family
+    of tests is the honest comparison -- not the full ~900-combination
+    exploratory search, which is a different, much larger family.
+    """
     disc = discretize(df)
     cond_cols = _condition_columns(disc)
+    if restrict_cols is not None:
+        wanted = set(restrict_cols)
+        cond_cols = [c for c in cond_cols if c in wanted or c.replace("_bin", "") in wanted]
 
     base_r_values = disc[target_col].dropna().values
     base_win_rate = float((base_r_values > 0).mean())
