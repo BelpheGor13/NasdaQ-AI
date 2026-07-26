@@ -1,0 +1,300 @@
+<title>ملخص مبسّط — نتائج تحسين الخروج (Exit) على استراتيجية NAS100</title>
+<style>
+  :root{
+    --bg:#F2F5F3;
+    --surface:#FFFFFF;
+    --surface-2:#E8EDEA;
+    --text:#132521;
+    --text-muted:#5A6D67;
+    --border:#D9E1DD;
+    --accent:#A9701C;
+    --accent-soft:#F1E3CB;
+    --gain:#1B8A57;
+    --gain-bg:#E1F4EA;
+    --loss:#BD3A31;
+    --loss-bg:#FBE7E4;
+    --watch:#B8860B;
+    --watch-bg:#FBF3D9;
+    --shadow: 0 1px 2px rgba(19,37,33,0.06), 0 8px 24px rgba(19,37,33,0.05);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0A1210; --surface:#111C19; --surface-2:#16211D; --text:#E7EFEC; --text-muted:#8FA39C;
+      --border:#223029; --accent:#E3AE5E; --accent-soft:#2B2110; --gain:#3ED694; --gain-bg:rgba(62,214,148,0.13);
+      --loss:#FF8177; --loss-bg:rgba(255,129,119,0.13); --watch:#E8C158; --watch-bg:rgba(232,193,88,0.14);
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.35);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0A1210; --surface:#111C19; --surface-2:#16211D; --text:#E7EFEC; --text-muted:#8FA39C;
+    --border:#223029; --accent:#E3AE5E; --accent-soft:#2B2110; --gain:#3ED694; --gain-bg:rgba(62,214,148,0.13);
+    --loss:#FF8177; --loss-bg:rgba(255,129,119,0.13); --watch:#E8C158; --watch-bg:rgba(232,193,88,0.14);
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.35);
+  }
+  :root[data-theme="light"]{
+    --bg:#F2F5F3; --surface:#FFFFFF; --surface-2:#E8EDEA; --text:#132521; --text-muted:#5A6D67;
+    --border:#D9E1DD; --accent:#A9701C; --accent-soft:#F1E3CB; --gain:#1B8A57; --gain-bg:#E1F4EA;
+    --loss:#BD3A31; --loss-bg:#FBE7E4; --watch:#B8860B; --watch-bg:#FBF3D9;
+    --shadow: 0 1px 2px rgba(19,37,33,0.06), 0 8px 24px rgba(19,37,33,0.05);
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    direction:rtl;
+    unicode-bidi:isolate;
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Tahoma",system-ui,sans-serif;
+    line-height:1.75;
+    font-size:16px;
+    -webkit-font-smoothing:antialiased;
+  }
+  /* the fix for scrambled Arabic/English/number order: force every mixed
+     line into plaintext bidi resolution, and pin pure-English/URL/number
+     tokens to LTR explicitly so they don't get visually reordered inside
+     an RTL paragraph. */
+  p, li, td, th, .mixed{
+    unicode-bidi:plaintext;
+  }
+  .en, .num, code{
+    direction:ltr;
+    unicode-bidi:isolate;
+    font-family:ui-monospace,"SF Mono","Cascadia Code","Consolas",monospace;
+    font-variant-numeric:tabular-nums;
+    display:inline-block;
+  }
+
+  .wrap{max-width:900px;margin:0 auto;padding:32px 20px 80px;}
+  header{margin-bottom:28px;}
+  header h1{
+    font-family:Georgia,"Iowan Old Style",serif;
+    font-size:clamp(22px,3.2vw,30px);
+    font-weight:600;
+    margin:0 0 10px;
+    text-wrap:balance;
+  }
+  header p{color:var(--text-muted);font-size:15px;max-width:70ch;margin:0;}
+
+  .verdict-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:12px;
+    margin:26px 0 36px;
+  }
+  .verdict{
+    border-radius:12px;
+    padding:18px 18px;
+    box-shadow:var(--shadow);
+    border:1px solid var(--border);
+  }
+  .verdict.gain{background:var(--gain-bg);border-color:var(--gain);}
+  .verdict.loss{background:var(--loss-bg);border-color:var(--loss);}
+  .verdict.watch{background:var(--watch-bg);border-color:var(--watch);}
+  .verdict .icon{font-size:22px;margin-bottom:6px;display:block;}
+  .verdict .title{font-weight:700;font-size:15.5px;margin-bottom:4px;}
+  .verdict.gain .title{color:var(--gain);}
+  .verdict.loss .title{color:var(--loss);}
+  .verdict.watch .title{color:var(--watch);}
+  .verdict .desc{font-size:13.5px;color:var(--text);opacity:0.9;}
+
+  section.card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:22px 24px;
+    margin-bottom:20px;
+    box-shadow:var(--shadow);
+  }
+  section.card > h2{
+    font-size:19px;
+    font-weight:700;
+    margin:0 0 6px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  section.card > .lede{
+    font-size:15px;
+    color:var(--text-muted);
+    margin:0 0 16px;
+  }
+
+  .stat-row{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;}
+  .stat{
+    background:var(--surface-2);
+    border-radius:10px;
+    padding:10px 14px;
+    min-width:120px;
+    text-align:center;
+    flex:1;
+  }
+  .stat .num{font-size:19px;font-weight:700;color:var(--text);display:block;}
+  .stat .num.gain{color:var(--gain);}
+  .stat .num.loss{color:var(--loss);}
+  .stat .lbl{font-size:12px;color:var(--text-muted);margin-top:2px;}
+
+  details{
+    border-top:1px solid var(--border);
+    padding-top:12px;
+    margin-top:12px;
+  }
+  details summary{
+    cursor:pointer;
+    font-weight:600;
+    font-size:14.5px;
+    color:var(--accent);
+    list-style:none;
+  }
+  details summary::-webkit-details-marker{display:none;}
+  details summary::before{content:"◂ ";}
+  details[open] summary::before{content:"▾ ";}
+  details .body{padding:12px 4px 4px;font-size:14.5px;}
+
+  table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0;}
+  th{background:var(--surface-2);padding:8px 10px;text-align:right;font-weight:600;font-size:12.5px;color:var(--text-muted);}
+  td{padding:8px 10px;border-bottom:1px solid var(--border);}
+  tr:last-child td{border-bottom:none;}
+  .pos{color:var(--gain);font-weight:600;}
+  .neg{color:var(--loss);font-weight:600;}
+
+  .badge{
+    display:inline-flex;align-items:center;gap:4px;
+    font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;
+  }
+  .badge.gain{background:var(--gain-bg);color:var(--gain);}
+  .badge.loss{background:var(--loss-bg);color:var(--loss);}
+  .badge.watch{background:var(--watch-bg);color:var(--watch);}
+
+  footer{
+    margin-top:36px;padding-top:18px;border-top:1px solid var(--border);
+    color:var(--text-muted);font-size:12.5px;
+  }
+  footer a{color:var(--accent);}
+  @media (max-width:600px){
+    .wrap{padding:20px 14px 60px;}
+    table{font-size:12px;}
+  }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>ملخص مبسّط: شو لازم تسوي بالخروج من صفقاتك؟</h1>
+    <p>خلاصة كل التحاليل الافتراضية (test-only) يلي سويناها على <span class="en">789</span> صفقة (<span class="en">2020-2024</span>) — بدون أي تعديل على البيانات الأصلية. التفاصيل الكاملة موجودة بالتقارير التقنية المرتبطة تحت كل قسم.</p>
+  </header>
+
+  <div class="verdict-grid">
+    <div class="verdict gain">
+      <span class="icon">✅</span>
+      <div class="title">التزم بهدفك الأصلي</div>
+      <div class="desc">خلّي الصفقة تجري لـ<span class="en">idealTP</span> بدل ما تسكّرها يدوي. أهم شي لقيناه.</div>
+    </div>
+    <div class="verdict loss">
+      <span class="icon">❌</span>
+      <div class="title">لا توقف التداول بعد ربح شهري</div>
+      <div class="desc">وقف التداول عند <span class="en">+2%</span> بالشهر يضرّك <span class="en">-53%</span> من ربحك السنوي.</div>
+    </div>
+    <div class="verdict loss">
+      <span class="icon">❌</span>
+      <div class="title">لا تصغّر هدفك (Target)</div>
+      <div class="desc">هدف صغير جداً مقارنة بحركة السوق = خسارة شبه مضمونة (فوز <span class="en">0-7%</span> بس).</div>
+    </div>
+    <div class="verdict watch">
+      <span class="icon">👀</span>
+      <div class="title">احترس أول 15 دقيقة بعد PMI</div>
+      <div class="desc">مؤشر أولي (عيّنة صغيرة) — مو مؤكَّد بعد، بس يستاهل المراقبة.</div>
+    </div>
+  </div>
+
+  <section class="card">
+    <h2>1️⃣ الوقف المتحرك (Trailing Stop) <span class="badge loss">لا يساعد</span></h2>
+    <p class="lede">جرّبنا تحريك وقف الخسارة تلقائياً كل ما تحرّك السعر لصالحك، بنسب مختلفة من <span class="en">1%</span> إلى <span class="en">20%</span>.</p>
+    <div class="stat-row">
+      <div class="stat"><span class="num loss">أضعف من الأصلي بكل النسب</span><span class="lbl">النتيجة العامة</span></div>
+      <div class="stat"><span class="num">معامل الربح <span class="en">1.18</span> → <span class="en">0.96</span></span><span class="lbl">أفضل نسبة (<span class="en">1%</span>)</span></div>
+    </div>
+    <details>
+      <summary>شو السبب؟</summary>
+      <div class="body">
+        استراتيجيتك معدل فوزها منخفض (حوالي <span class="en">27%</span>) وربحها معتمد على صفقات كبيرة قليلة. الوقف المتحرك بيقطع هذه الصفقات الكبيرة بدري، فيحوّل ربح كبير لربح صغير أو خسارة. النتيجة اتفحصت بمونت كارلو <span class="en">1000</span> مرة — التراجع ثابت مو صدفة.
+      </div>
+    </details>
+    <footer style="margin-top:10px;border:none;padding-top:6px;">
+      التقرير الكامل: <a href="trailing_stop_report_arabic.md">trailing_stop_report_arabic.md</a>
+    </footer>
+  </section>
+
+  <section class="card">
+    <h2>2️⃣ الأنماط المخفية + الالتزام بالهدف <span class="badge gain">أهم اكتشاف</span></h2>
+    <p class="lede">قسّمنا صفقاتك لمجموعتين حسب حالة السوق وقت الدخول، وجرّبنا <span class="en">19</span> طريقة خروج مختلفة على كل مجموعة.</p>
+    <div class="stat-row">
+      <div class="stat"><span class="num gain">+<span class="en">176,787$</span></span><span class="lbl">الفرق لو التزمت بالهدف</span></div>
+      <div class="stat"><span class="num">معامل الربح <span class="en">1.12</span> → <span class="en">2.35</span></span><span class="lbl">تحسّن</span></div>
+      <div class="stat"><span class="num">أقصى تراجع <span class="en">46R</span> → <span class="en">18R</span></span><span class="lbl">تحسّن</span></div>
+    </div>
+    <table>
+      <tr><th>المقياس</th><th>الأصلي</th><th>لو التزمت بالهدف</th></tr>
+      <tr><td>معدل الفوز</td><td>27%</td><td class="pos">53%</td></tr>
+      <tr><td>العائد المتوقع لكل صفقة</td><td class="neg">0.07R</td><td class="pos">0.53R</td></tr>
+      <tr><td>إجمالي الربح</td><td>55R</td><td class="pos">400R</td></tr>
+    </table>
+    <details>
+      <summary>ليش الأنماط (Clusters) ما فرّقت؟</summary>
+      <div class="body">
+        نفس طريقة الخروج (الالتزام بالهدف) فازت بكل الأنماط وكل السنوات — يعني ما في حاجة تصنّف صفقتك، القرار نفسه ينفع للكل. أهم <span class="en">56</span> صفقة كانت أرباح فعلية، وكانت راح تنقلب لخسارة كاملة (<span class="en">20</span> منها بالضبط) لو تُركت بدون تدخل — يعني "التأمين" اليدوي ساعد بحالات معينة، بس بالمجمل الالتزام بالهدف أفضل بكثير.
+      </div>
+    </details>
+    <footer style="margin-top:10px;border:none;padding-top:6px;">
+      التقرير الكامل: <a href="hidden_pattern_report_arabic.md">hidden_pattern_report_arabic.md</a>
+    </footer>
+  </section>
+
+  <section class="card">
+    <h2>3️⃣ حجم الستوب والهدف، الموسمية، والأخبار <span class="badge watch">مؤشرات + اكتشاف قوي</span></h2>
+
+    <details open>
+      <summary>وقف التداول الشهري</summary>
+      <div class="body">
+        <span class="badge loss">لا</span> وقف التداول بعد ربح <span class="en">2%</span> بالشهر يقلّل ربحك السنوي من <span class="en">43,287$</span> لـ<span class="en">20,375$</span> (<span class="en">-53%</span>) — لأنه بيوقفك قبل الصفقة الكبيرة يلي ممكن تجي بنفس الشهر.
+      </div>
+    </details>
+
+    <details open>
+      <summary>حجم الهدف (أقوى اكتشاف بهذا القسم)</summary>
+      <div class="body">
+        قسنا حجم الهدف نسبةً لحركة السوق الفعلية (لا كنسبة % من السعر، لأن سعر ناسداك تضاعف عبر السنين). <b>هدف أصغر من <span class="en">5%</span> من حركة اليوم النموذجية = <span class="en">0%</span> فوز</b> (<span class="en">233</span> صفقة، ولا واحدة ربحت). كل ما كبر الهدف تحسّن الأداء بثبات لحد <span class="en">88%+</span> فوز.
+        <br><br>
+        <b>المنطق الكامل بين الستوب والهدف</b>: لما يكون الستوب والهدف الاثنين متوافقين مع حركة الشهر (<span class="en">238</span> صفقة) → فوز <span class="en">72%</span>. لما يكون الستوب طبيعي بس الهدف صغير جداً (<span class="en">470</span> صفقة = <span class="en">60%</span> من صفقاتك) → فوز <span class="en">4%</span> بس.
+      </div>
+    </details>
+
+    <details>
+      <summary>حجم الستوب</summary>
+      <div class="body">
+        أعقد من "كبير = سيء": الأداء بيتحسّن تدريجياً كل ما كبر الستوب لحد نقطة معيّنة (<span class="en">~26%</span> من حركة اليوم)، وبعدها ينقلب سالب بحدة. <span class="badge watch">عيّنة صغيرة بالطرف الأقصى</span>
+      </div>
+    </details>
+
+    <details>
+      <summary>يوم الأسبوع</summary>
+      <div class="body">
+        الأربعاء هو اليوم الوحيد بعائد سالب لاستراتيجيتك (<span class="en">-0.12R</span>)، الإثنين الأقوى (<span class="en">+0.32R</span>). ملاحظة وصفية تستاهل متابعة، مو نتيجة مؤكَّدة.
+      </div>
+    </details>
+
+    <details>
+      <summary>الأخبار الحمراء (<span class="en">CPI, NFP, FOMC, PCE, GDP, PMI</span>)</summary>
+      <div class="body">
+        سؤال "<span class="en">5</span> دقايق قبل/بعد" ما إله صفقات كافية لاختباره (دخولك بعيد عن توقيت أغلب الأخبار). لما وسّعنا: أول <span class="en">15</span> دقيقة بعد <span class="en">PMI</span> تحديداً — <span class="en">6</span> صفقات، كل الست بلا استثناء صفر فوز. <span class="badge watch">عيّنة صغيرة جداً، مؤشر لا نتيجة</span>
+      </div>
+    </details>
+
+    <footer style="margin-top:10px;border:none;padding-top:6px;">
+      التقرير الكامل: <a href="pattern_deepdive_report_arabic.md">pattern_deepdive_report_arabic.md</a>
+    </footer>
+  </section>
+
+  <footer>
+    هذا ملخص مبسّط لتسهيل القراءة — كل رقم هون مأخوذ حرفياً من التقارير التقنية الكاملة (روابطها تحت كل قسم)، يلي فيها الجداول والمصادر والتحفظات بالتفصيل. الأرقام بالإنجليزي داخل النص متعمَّد (مش خلل بالتنسيق) — يحل مشكلة اختلاط ترتيب الكلمات بين العربي والإنجليزي والأرقام.
+  </footer>
+</div>

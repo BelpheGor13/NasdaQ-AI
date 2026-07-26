@@ -7,6 +7,8 @@ never a silent guess.
 """
 from pathlib import Path
 
+import numpy as np
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 TRADES_CSV = PROJECT_ROOT / "analytics_1.csv"
 CANDLES_PARQUET = PROJECT_ROOT / "nasdaq_m1_2020_2024.parquet"
@@ -97,6 +99,41 @@ EXIT_STRATEGY_MAX_EXTENSION_MINUTES = TRAILING_AGGRESSIVE_MAX_EXTENSION_MINUTES
 # Minimum trades per cluster before it's treated as anything other than
 # low-confidence (spec: "<30 trades flagged as low-confidence").
 MIN_CLUSTER_SIZE = 30
+
+# --- Monthly profit-target-then-stop (test-only) ---
+# initalBalance is a constant $100,000 for every trade (verified: nunique==1,
+# position sizing does not compound with currentRealizedBalance) -- so "X%
+# monthly profit" is defined against this fixed reference base, not a
+# compounding equity curve.
+ACCOUNT_BASE_USD = 100_000
+MONTHLY_TARGET_GRID = [0.01, 0.02, 0.03, 0.05]
+
+# --- SL/TP size buckets (non-seasonal) ---
+# Raw % of entry price -- kept as a secondary/reference view, but NOT the
+# primary one: NAS100's own price level roughly tripled from 2020 (~9,000)
+# to 2024 (~20,000+), so the same POINT distance reads as a smaller % in
+# 2024 than in 2020, confounding "stop size" with "which year." Flagged by
+# the user; the ATR-relative buckets below are the primary measure.
+SL_SIZE_PCT_BUCKETS = [0.0, 0.001, 0.002, 0.003, 0.005, 0.01, np.inf]
+TP_SIZE_PCT_BUCKETS = [0.0, 0.005, 0.01, 0.02, 0.03, 0.05, np.inf]
+
+# Primary measure: SL/TP size relative to same-day ATR(14) (i.e. relative
+# to how much NAS100 actually moves, not a flat fraction of its price
+# level) -- reuses feature_engineering.add_regime_features' sl_pct_of_atr.
+# Fine increments (~0.05 of one ATR) per the user's explicit request to
+# find the precise threshold, not a handful of coarse bands.
+SL_ATR_BUCKETS = [0.0, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, np.inf]
+TP_ATR_BUCKETS = [0.0, 0.10, 0.20, 0.30, 0.50, 1.00, 2.00, np.inf]
+
+# --- Seasonality (external source: barchart.com $IUXX "Total Percent
+# Returns" table, Abs Average row, fetched 2026-07-26; Nasdaq-100 cash
+# index, 2010-2026 history -- used as an external, higher-sample-size proxy
+# for OANDA:NAS100USD per explicit user preference over deriving it from
+# our own 5-year candle sample). Values are % magnitude of monthly move.
+SEASONAL_ABS_AVG_MONTHLY_MOVE_PCT = {
+    1: 4.81, 2: 3.39, 3: 4.38, 4: 4.65, 5: 5.29, 6: 4.34,
+    7: 4.43, 8: 3.88, 9: 4.05, 10: 5.17, 11: 3.39, 12: 3.08,
+}
 
 # --- No-stop-loss scenario (test-only, hypothetical): what if the original
 # initalSL were removed entirely and the trade just ran? See
