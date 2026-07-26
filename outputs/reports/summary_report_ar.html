@@ -184,10 +184,10 @@
   </header>
 
   <div class="verdict-grid">
-    <div class="verdict gain">
-      <span class="icon">✅</span>
-      <div class="title">التزم بهدفك الأصلي</div>
-      <div class="desc">خلّي الصفقة تجري لـ<span class="en">idealTP</span> بدل ما تسكّرها يدوي. أهم شي لقيناه.</div>
+    <div class="verdict watch">
+      <span class="icon">⚠️</span>
+      <div class="title">"التزم بهدفك" — رقم مصحَّح، الأثر ضعيف</div>
+      <div class="desc">الرقم الأول (<span class="en">+176,787$</span>) كان خطأ بسبب مشكلة بالبيانات. بعد التصحيح: فرق ضئيل (<span class="en">+10.5R</span> فقط على البيانات الموثوقة).</div>
     </div>
     <div class="verdict loss">
       <span class="icon">❌</span>
@@ -225,23 +225,25 @@
   </section>
 
   <section class="card">
-    <h2>2️⃣ الأنماط المخفية + الالتزام بالهدف <span class="badge gain">أهم اكتشاف</span></h2>
+    <h2>2️⃣ الأنماط المخفية + الالتزام بالهدف <span class="badge watch">تم تصحيح الرقم</span></h2>
     <p class="lede">قسّمنا صفقاتك لمجموعتين حسب حالة السوق وقت الدخول، وجرّبنا <span class="en">19</span> طريقة خروج مختلفة على كل مجموعة.</p>
+    <div class="body" style="background:var(--watch-bg);border:1px solid var(--watch);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:13.5px;">
+      <b>⚠️ تصحيح</b>: الأرقام تحت (<span class="en">+176,787$</span>, معامل ربح <span class="en">2.35</span>) كانت مبنية على عمود <span class="en">idealTP</span> المُلوَّث لـ<span class="en">465</span> صفقة (<span class="en">59%</span>) — القيمة فيه لهذه الصفقات مُعادة الحساب بعد الخسارة، مش الهدف الحقيقي وقت الدخول. الجدول تحت مُصحَّح الآن على <span class="en">324</span> صفقة موثوقة فقط.
+    </div>
     <div class="stat-row">
-      <div class="stat"><span class="num gain">+<span class="en">176,787$</span></span><span class="lbl">الفرق لو التزمت بالهدف</span></div>
-      <div class="stat"><span class="num">معامل الربح <span class="en">1.12</span> → <span class="en">2.35</span></span><span class="lbl">تحسّن</span></div>
-      <div class="stat"><span class="num">أقصى تراجع <span class="en">46R</span> → <span class="en">18R</span></span><span class="lbl">تحسّن</span></div>
+      <div class="stat"><span class="num">+<span class="en">10.5R</span></span><span class="lbl">الفرق الحقيقي (لا <span class="en">+346R</span>)</span></div>
+      <div class="stat"><span class="num loss">معامل الربح <span class="en">71.5</span> → <span class="en">16.0</span></span><span class="lbl">أسوأ فعلياً</span></div>
     </div>
     <table>
-      <tr><th>المقياس</th><th>الأصلي</th><th>لو التزمت بالهدف</th></tr>
-      <tr><td>معدل الفوز</td><td>27%</td><td class="pos">53%</td></tr>
-      <tr><td>العائد المتوقع لكل صفقة</td><td class="neg">0.07R</td><td class="pos">0.53R</td></tr>
-      <tr><td>إجمالي الربح</td><td>55R</td><td class="pos">400R</td></tr>
+      <tr><th>المقياس</th><th>الأصلي (<span class="en">324</span> موثوقة)</th><th>لو التزمت بالهدف</th></tr>
+      <tr><td>معدل الفوز</td><td>65.7%</td><td class="pos">70.4%</td></tr>
+      <tr><td>العائد المتوقع لكل صفقة</td><td>1.70R</td><td>1.73R</td></tr>
+      <tr><td>إجمالي الربح (<span class="en">324</span> صفقة)</td><td>549.9R</td><td>560.3R</td></tr>
     </table>
     <details>
-      <summary>ليش الأنماط (Clusters) ما فرّقت؟</summary>
+      <summary>ليش الأنماط (Clusters) ما فرّقت؟ (هذا الجزء صحيح وغير متأثر)</summary>
       <div class="body">
-        نفس طريقة الخروج (الالتزام بالهدف) فازت بكل الأنماط وكل السنوات — يعني ما في حاجة تصنّف صفقتك، القرار نفسه ينفع للكل. أهم <span class="en">56</span> صفقة كانت أرباح فعلية، وكانت راح تنقلب لخسارة كاملة (<span class="en">20</span> منها بالضبط) لو تُركت بدون تدخل — يعني "التأمين" اليدوي ساعد بحالات معينة، بس بالمجمل الالتزام بالهدف أفضل بكثير.
+        نفس طريقة الخروج فازت بكل الأنماط وكل السنوات — يعني ما في حاجة تصنّف صفقتك، هذا الاستنتاج سليم. أما رقم "<span class="en">56</span> صفقة تأمين حماك" و"<span class="en">20</span> صفقة انقلبت لخسارة" فمتأثر بنفس مشكلة <span class="en">idealTP</span> ويحتاج مراجعة.
       </div>
     </details>
     <footer style="margin-top:10px;border:none;padding-top:6px;">
@@ -250,7 +252,7 @@
   </section>
 
   <section class="card">
-    <h2>3️⃣ حجم الستوب والهدف، الموسمية، والأخبار <span class="badge watch">مؤشرات + اكتشاف قوي</span></h2>
+    <h2>3️⃣ حجم الستوب والهدف، الموسمية، والأخبار <span class="badge watch">مؤشرات، بعضها مصحَّح</span></h2>
 
     <details open>
       <summary>وقف التداول الشهري</summary>
@@ -260,11 +262,11 @@
     </details>
 
     <details open>
-      <summary>حجم الهدف (أقوى اكتشاف بهذا القسم)</summary>
+      <summary>حجم الهدف <span class="badge watch">رقم مصحَّح — نفس المشكلة أعلاه</span></summary>
       <div class="body">
-        قسنا حجم الهدف نسبةً لحركة السوق الفعلية (لا كنسبة % من السعر، لأن سعر ناسداك تضاعف عبر السنين). <b>هدف أصغر من <span class="en">5%</span> من حركة اليوم النموذجية = <span class="en">0%</span> فوز</b> (<span class="en">233</span> صفقة، ولا واحدة ربحت). كل ما كبر الهدف تحسّن الأداء بثبات لحد <span class="en">88%+</span> فوز.
+        ⚠️ الأرقام الأولى (<span class="en">0%</span> فوز، <span class="en">4%</span> فوز) كانت مضخَّمة لأنها مبنية بشكل كبير على نفس الصفقات المُلوَّثة (فوق). **الرقم الصحيح على البيانات الموثوقة (<span class="en">324</span> صفقة)**: هدف صغير (<span class="en">0.1-0.2×ATR</span>) → فوز <span class="en">15.8%</span> فقط، وكل ما كبر الهدف تحسّن الأداء بثبات لحد <span class="en">88%</span> فوز عند <span class="en">1-2×ATR</span>. <b>الاتجاه العام صحيح ومتّسق، بس بدون الرقم الكارثي "صفر بالمئة".</b>
         <br><br>
-        <b>المنطق الكامل بين الستوب والهدف</b>: لما يكون الستوب والهدف الاثنين متوافقين مع حركة الشهر (<span class="en">238</span> صفقة) → فوز <span class="en">72%</span>. لما يكون الستوب طبيعي بس الهدف صغير جداً (<span class="en">470</span> صفقة = <span class="en">60%</span> من صفقاتك) → فوز <span class="en">4%</span> بس.
+        بالمنطق المشترك (ستوب × هدف): لما الستوب طبيعي بس الهدف صغير (على البيانات الموثوقة) → فوز <span class="en">31%</span> تقريباً (لا <span class="en">4%</span>) — لسا أضعف من الحالة الطبيعية (<span class="en">76%</span> فوز)، بس مش كارثي.
       </div>
     </details>
 
@@ -295,6 +297,8 @@
   </section>
 
   <footer>
+    <b>تحديث</b>: بعد سؤال المستخدم عن منطق "ستوب طبيعي وهدف صغير"، اكتشفنا إن عمود <span class="en">idealTP</span> مُعاد حسابه لـ<span class="en">465</span> صفقة خسرت بالكامل — صحّحنا كل الأرقام المتأثرة بهذا القسم (<span class="en">2</span> و<span class="en">3</span>) أعلاه. التفاصيل الكاملة بـ<code>src/idealtp_data_quality_check.py</code>.
+    <br><br>
     هذا ملخص مبسّط لتسهيل القراءة — كل رقم هون مأخوذ حرفياً من التقارير التقنية الكاملة (روابطها تحت كل قسم)، يلي فيها الجداول والمصادر والتحفظات بالتفصيل. الأرقام بالإنجليزي داخل النص متعمَّد (مش خلل بالتنسيق) — يحل مشكلة اختلاط ترتيب الكلمات بين العربي والإنجليزي والأرقام.
   </footer>
 </div>
