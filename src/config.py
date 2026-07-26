@@ -81,7 +81,7 @@ CLUSTER_K_CANDIDATES = (2, 3, 4, 5)
 # Phase 3 exit-strategy grids.
 FIXED_TP_R_MULTIPLES = [2.0, 3.0, 4.0]
 TIME_BASED_EXIT_HOURS = [1, 2, 4, 8]
-PARTIAL_PROFIT_LEGS = [(0.5, 2.0), (0.3, 4.0), (0.2, None)]  # (fraction, R-multiple); None = idealTP
+PARTIAL_PROFIT_LEGS = [(0.5, 2.0), (0.3, 4.0), (0.2, None)]  # (fraction, R-multiple); None = real target (target_resolution.py)
 # MFE-aware adaptive trailing: below the first breakpoint, no active
 # management (ride to the original SL only); between the breakpoints, a
 # moderate trail; above the second, a tight trail. Breakpoints and trail

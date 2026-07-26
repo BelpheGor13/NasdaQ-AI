@@ -107,7 +107,8 @@ def build_html(trade_table, monthly_table, kpis: dict, tie_worst_case_usd: float
 <h1>هل التأمين (وقف الخسارة) حماك أم كلّفك؟</h1>
 <p class="subtitle">
   مقارنة النتيجة الفعلية لكل صفقة (اللي صار فيها إغلاق/تأمين يدوي) بالنتيجة الافتراضية لو تُركت الصفقة
-  تمشي لحد هدفها الأصلي (<code>idealTP</code>) أو وقف خسارتها الأصلي (<code>initalSL</code>) فقط، بدون أي
+  تمشي لحد هدفها الحقيقي (<code>maxTP</code> لو موجود، وإلا ضعف مسافة وقف الخسارة 2R كحد أدنى افتراضي —
+  <code>src/target_resolution.py</code>) أو وقف خسارتها الأصلي (<code>initalSL</code>) فقط، بدون أي
   تدخّل يدوي. {kpis['n_total']} صفقة، 2020–2024. الكود والمنهجية في
   <code>src/exit_strategy_simulation.py</code> + <code>src/target_or_stop_data.py</code>.
 </p>
@@ -124,7 +125,7 @@ def build_html(trade_table, monthly_table, kpis: dict, tie_worst_case_usd: float
   <b>تحفّظ مُقاس رقميًا:</b> في {kpis['n_same_candle_ties']} صفقة فقط ({kpis['pct_same_candle_ties_of_resolved']*100:.2f}%
   من الصفقات المحسومة)، وقف الخسارة والهدف كانا داخل نفس شمعة الدقيقة الواحدة — البيانات لا تسمح بمعرفة
   أيّهما لُمس فعليًا أولًا، والمحاكاة ترجّح الهدف في هذه الحالة تحديدًا. الأثر الأسوأ الممكن لو كانت
-  كل هذه الحالات التسع فعليًا وقف خسارة كامل بدل الهدف: الرقم الإجمالي يتحرك من
+  كل هذه الحالات الـ{kpis['n_same_candle_ties']} فعليًا وقف خسارة كامل بدل الهدف: الرقم الإجمالي يتحرك من
   <b>{_fmt_usd(total_diff)}</b> إلى <b>{_fmt_usd(worst_case_total)}</b>
   ({tie_worst_case_usd/total_diff*100:+.1f}%) — أثر هامشي لا يغيّر الخلاصة العامة.
   الصفوف المتأثرة مُعلَّمة بـ <span class="tie-flag">⚠ تعارض</span> في الجدول أدناه.
@@ -172,9 +173,10 @@ def build_html(trade_table, monthly_table, kpis: dict, tie_worst_case_usd: float
 </div>
 
 <footer>
-  مبني على محاكاة استرجاعية للشموع الدقيقة (بدون تسريب معلومات مستقبلية) — سعر التنفيذ الافتراضي عند
-  <code>idealTP</code> يفترض تنفيذًا مثاليًا بدون انزلاق سعري. <code>idealTP</code> هو أفضل سعر تحقّق
-  فعليًا بأثر رجعي وليس هدفًا كان معروفًا مسبقًا قبل الدخول — راجع
+  مبني على محاكاة استرجاعية للشموع الدقيقة (بدون تسريب معلومات مستقبلية) — سعر التنفيذ الافتراضي يفترض
+  تنفيذًا مثاليًا بدون انزلاق سعري عند الهدف الحقيقي (<code>maxTP</code>) لـ213 صفقة أُغلقت فعليًا بربح
+  حقيقي، وعند ضعف مسافة وقف الخسارة (2R) كحد أدنى افتراضي لبقية الصفقات التي لم يُسجَّل لها هدف حقيقي —
+  راجع <code>src/target_resolution.py</code> و
   <code>outputs/reports/target_or_stop_report_arabic.md</code> للتحليل الإحصائي الكامل (اختبار مزدوج
   ومونت كارلو). الأرقام لأغراض البحث والتخطيط فقط، وليست توصية استثمارية.
 </footer>

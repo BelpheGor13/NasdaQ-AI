@@ -1,18 +1,19 @@
 """Builds the per-trade and per-month data tables behind the target-or-stop
 interactive report -- reuses exit_strategy_simulation.py's existing
-"baseline" and "fixed_tp_idealTP" (conservative scenario) outputs, adds
+"baseline" and "fixed_tp_real_target" (conservative scenario) outputs, adds
 per-trade status labels, and flags the same-candle SL/TP tie-breaking edge
-case (documented assumption: when both the original stop and idealTP fall
-inside the same 1-minute candle's range, the simulator resolves it as the
-target being hit -- see exit_strategy_simulation.py's docstring). This
-module quantifies exactly how many trades that touches and how much it
-could move the headline number, instead of leaving it as an unquantified
-caveat.
+case (documented assumption: when both the original stop and the resolved
+real target -- src/target_resolution.py: maxTP when present, else a 2R
+floor -- fall inside the same 1-minute candle's range, the simulator
+resolves it as the target being hit -- see exit_strategy_simulation.py's
+docstring). This module quantifies exactly how many trades that touches
+and how much it could move the headline number, instead of leaving it as
+an unquantified caveat.
 """
 import numpy as np
 import pandas as pd
 
-from src import config, data_loading, exit_strategy_simulation
+from src import config, data_loading, exit_strategy_simulation, target_resolution
 
 FLIP_TO_LOSS_R_THRESHOLD = -0.99  # matches "closed at essentially a full stop"
 
@@ -29,7 +30,8 @@ def _classify(actual_r: float, target_r: float) -> str:
 
 def find_same_candle_ties(trades: pd.DataFrame, candles: pd.DataFrame) -> set:
     """Trade ids where the resolving candle's range touches BOTH the
-    original stop and idealTP -- we can't tell from 1-minute OHLC which
+    original stop and the resolved real target (maxTP, else a 2R floor --
+    src/target_resolution.py) -- we can't tell from 1-minute OHLC which
     was hit first, and the simulator resolves these in the target's favor.
     """
     ts = candles["datetime_utc"].values
@@ -45,7 +47,7 @@ def find_same_candle_ties(trades: pd.DataFrame, candles: pd.DataFrame) -> set:
 
     entry_arr = trades["entryPrice"].values
     sl_arr = trades["initalSL"].values
-    tp_arr = trades["idealTP"].values
+    tp_arr = target_resolution.resolve_target_series(trades)["target_price"].values
     side_arr = trades["side"].values
     risk_arr = np.abs(entry_arr - sl_arr)
 
@@ -69,7 +71,7 @@ def find_same_candle_ties(trades: pd.DataFrame, candles: pd.DataFrame) -> set:
 
 def build_trade_table(sim: pd.DataFrame, tie_ids: set) -> pd.DataFrame:
     base = sim[(sim["scenario"] == "conservative") & (sim["strategy"] == "baseline")].sort_values("id")
-    targ = sim[(sim["scenario"] == "conservative") & (sim["strategy"] == "fixed_tp_idealTP")].sort_values("id")
+    targ = sim[(sim["scenario"] == "conservative") & (sim["strategy"] == "fixed_tp_real_target")].sort_values("id")
     assert list(base["id"]) == list(targ["id"])
 
     out = pd.DataFrame({

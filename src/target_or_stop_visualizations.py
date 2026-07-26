@@ -21,7 +21,7 @@ def _save(fig, name: str) -> str:
 
 def plot_equity_comparison(sim: pd.DataFrame, scenario: str = "conservative") -> str:
     base = sim[(sim["scenario"] == scenario) & (sim["strategy"] == "baseline")].sort_values("dateStart_utc")
-    targ = sim[(sim["scenario"] == scenario) & (sim["strategy"] == "fixed_tp_idealTP")].sort_values("dateStart_utc")
+    targ = sim[(sim["scenario"] == scenario) & (sim["strategy"] == "fixed_tp_real_target")].sort_values("dateStart_utc")
 
     fig, ax = plt.subplots(figsize=(9, 5))
     ax.plot(np.cumsum(base["exit_r"].values), color="#4C72B0", label="actual (discretionary exit)", linewidth=1.5)
@@ -35,7 +35,7 @@ def plot_equity_comparison(sim: pd.DataFrame, scenario: str = "conservative") ->
 
 
 def plot_strategy_comparison(global_table: pd.DataFrame, scenario: str) -> str:
-    order = ["baseline", "fixed_tp_idealTP", "fixed_tp_2R", "fixed_tp_3R", "fixed_tp_4R"]
+    order = ["baseline", "fixed_tp_real_target", "fixed_tp_2R", "fixed_tp_3R", "fixed_tp_4R"]
     t = global_table[global_table["strategy"].isin(order)].set_index("strategy").loc[order].reset_index()
 
     fig, axes = plt.subplots(1, 2, figsize=(11, 4.5))
@@ -94,5 +94,5 @@ if __name__ == "__main__":
         plot_strategy_comparison(table, scenario)
 
     base = sim[(sim["scenario"] == "conservative") & (sim["strategy"] == "baseline")].sort_values("id")
-    targ = sim[(sim["scenario"] == "conservative") & (sim["strategy"] == "fixed_tp_idealTP")].sort_values("id")
+    targ = sim[(sim["scenario"] == "conservative") & (sim["strategy"] == "fixed_tp_real_target")].sort_values("id")
     print(plot_bootstrap_pf(targ["exit_r"].values, base["exit_r"].values))

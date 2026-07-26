@@ -184,10 +184,15 @@
   </header>
 
   <div class="verdict-grid">
+    <div class="verdict gain">
+      <span class="icon">✅</span>
+      <div class="title">اترك الصفقة تصل لهدفها أو وقفها بدون تدخّل يدوي</div>
+      <div class="desc">تحسّن حقيقي ومتّسق عبر <span class="en">3</span> اختبارات مستقلة: معامل الربح يرتفع من <span class="en">1.18</span> إلى <span class="en">1.26-1.33</span> (<span class="en">+10-13%</span>)، وأقصى تراجع ينخفض من <span class="en">46.4R</span> إلى <span class="en">~33R</span>. تحسّن حقيقي ومتواضع، مو مضاعفة الأداء.</div>
+    </div>
     <div class="verdict loss">
       <span class="icon">❌</span>
       <div class="title">لا تحرّك الستوب للتعادل (Breakeven)</div>
-      <div class="desc"><span class="en">93</span> صفقة كانت رابحة <span class="en">+2.09R</span> بالمتوسط بأعلى نقطة، وانتهت كلها عند <span class="en">0$</span> بالضبط بسبب تحريك الستوب. هذا الاكتشاف الحقيقي الأقوى (تصحيح لما قيل سابقاً).</div>
+      <div class="desc"><span class="en">93</span> صفقة كانت رابحة <span class="en">+2.09R</span> بالمتوسط بأعلى نقطة، وانتهت كلها عند <span class="en">0$</span> بالضبط بسبب تحريك الستوب. هذا الاكتشاف غير متأثر بالتصحيح (مبني على حساب مستقل من الشموع، مو على <span class="en">idealTP</span>).</div>
     </div>
     <div class="verdict loss">
       <span class="icon">❌</span>
@@ -197,7 +202,7 @@
     <div class="verdict loss">
       <span class="icon">❌</span>
       <div class="title">لا تصغّر هدفك (Target)</div>
-      <div class="desc">هدف صغير جداً مقارنة بحركة السوق = خسارة شبه مضمونة (فوز <span class="en">0-7%</span> بس).</div>
+      <div class="desc">هدف صغير جداً مقارنة بحركة السوق = أداء أضعف بوضوح (فوز <span class="en">~23%</span> تحت ربع حركة اليوم، يتحسّن تدريجياً كل ما كبر الهدف).</div>
     </div>
     <div class="verdict watch">
       <span class="icon">👀</span>
@@ -225,36 +230,43 @@
   </section>
 
   <section class="card">
-    <h2>2️⃣ الأنماط المخفية + قصة الهدف والتعادل <span class="badge loss">تصحيح نهائي (v2)</span></h2>
-    <p class="lede">قسّمنا صفقاتك لمجموعتين حسب حالة السوق وقت الدخول، وجرّبنا <span class="en">19</span> طريقة خروج مختلفة على كل مجموعة.</p>
-    <div class="body" style="background:var(--loss-bg);border:1px solid var(--loss);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:13.5px;">
-      <b>⚠️ تصحيح نهائي</b>: كل الأرقام السابقة (<span class="en">+176,787$</span>، وحتى <span class="en">+10.5R</span> من التصحيح الأول) كانت مبنية جزئياً على <span class="en">idealTP</span> المُلوَّث. بعد فحص أعمق (سؤالك "ليش صار هيك؟")، لقينا إن الملوَّث كمان يشمل صفقات التعادل التام (<span class="en">93</span> صفقة) مش بس الخسارة الكاملة. التقسيم الدقيق النهائي تحت، وهو مبني على بيانات نظيفة <span class="en">100%</span> (مافي أي استخدام لـ<span class="en">idealTP</span> الملوَّث).
+    <h2>2️⃣ الأنماط المخفية + هل ترك الصفقة بدون تدخّل يحسّن الأداء؟ <span class="badge gain">مصحَّح نهائياً</span></h2>
+    <p class="lede">قسّمنا صفقاتك لمجموعتين حسب حالة السوق وقت الدخول، وجرّبنا <span class="en">19</span> طريقة خروج مختلفة على كل مجموعة — وأضفنا اختبارين مباشرين: ترك الصفقة تصل لهدفها أو وقفها بدون تدخّل، بدون وبإغلاق إجباري بنهاية اليوم.</p>
+    <div class="body" style="background:var(--gain-bg);border:1px solid var(--gain);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:13.5px;">
+      <b>✅ تصحيح نهائي (<span class="en">target_resolution.py</span>)</b>: كل الأرقام أدناه الآن مبنية على الهدف الحقيقي — عمود <span class="en">maxTP</span> لما يكون موجوداً (<span class="en">213</span> صفقة أُغلقت بربح حقيقي)، وإلا ضعف مسافة وقف الخسارة (<span class="en">2R</span>) كحد أدنى افتراضي لبقية الـ<span class="en">576</span> صفقة. عمود <span class="en">idealTP</span> **ليس هدفاً إطلاقاً** — هو أعلى سعر وصلته الصفقة قبل ضرب وقف الخسارة الأصلي (<span class="en">MFE</span> قبل الستوب)، ولم يعد يُستخدم كهدف بأي مكان بالمشروع.
     </div>
+    <div class="stat-row">
+      <div class="stat"><span class="num gain">1.118 → <span class="en">1.259</span></span><span class="lbl">معامل الربح: الفعلي مقابل ترك الصفقة لهدفها/وقفها (<span class="en">+12.6%</span>)</span></div>
+      <div class="stat"><span class="num gain">32.6R</span><span class="lbl">أقصى تراجع (من <span class="en">46.4R</span> فعلياً)</span></div>
+      <div class="stat"><span class="num">t=2.854, p=0.0044</span><span class="lbl">دلالة إحصائية حقيقية، بس حجم أثر صغير (<span class="en">d=0.10</span>)</span></div>
+    </div>
+    <p style="font-size:13.5px;">نفس النتيجة تكرّرت بـ<span class="en">3</span> اختبارات مستقلة: <b>بدون تدخّل</b> (<span class="en">PF 1.259-1.304</span>)، <b>بدون تدخّل + إغلاق إجباري نفس اليوم (بدون تبييت)</b> (<span class="en">PF 1.328</span>، أفضل قليلاً). كلها اتفقت: تحسّن حقيقي ومتّسق، بس متواضع — مو مضاعفة الأداء زي ما ظهر بنسخ سابقة خاطئة.</p>
     <table>
       <tr><th>المجموعة</th><th>العدد</th><th>الوصف</th></tr>
       <tr><td>خسارة كاملة ميكانيكية</td><td>465</td><td>ضربت الستوب الأصلي بدون تدخّل</td></tr>
       <tr><td class="neg">تعادل تام (تدخّل يدوي واضح)</td><td class="neg">93</td><td class="neg">حُرِّك الستوب للتعادل</td></tr>
       <tr><td>وصلت لهدفها الحقيقي تقريباً</td><td>16</td><td>لا مجال كبير للتحسين</td></tr>
-      <tr><td>إغلاق مبكر حقيقي</td><td>197</td><td>الوحيدة القابلة لاختبار "ليش أقفلت بدري"</td></tr>
+      <tr><td>إغلاق مبكر حقيقي</td><td>197</td><td>خرجت يدوياً قبل الهدف أو الوقف</td></tr>
     </table>
     <div class="stat-row">
       <div class="stat"><span class="num loss">+<span class="en">2.09R</span></span><span class="lbl">متوسط أعلى ربح لصفقات التعادل، قبل ما ترجع لـ<span class="en">0$</span></span></div>
-      <div class="stat"><span class="num loss">~<span class="en">95R</span></span><span class="lbl">فرصة ضائعة حقيقية (نصف القمة، تقدير متحفظ)</span></div>
+      <div class="stat"><span class="num loss">~<span class="en">95R</span></span><span class="lbl">فرصة ضائعة حقيقية (نصف القمة، تقدير متحفظ — حساب مستقل من الشموع، غير متأثر بالتصحيح)</span></div>
     </div>
-    <p style="font-size:13.5px;">أما الـ<span class="en">197</span> صفقة "إغلاق مبكر حقيقي" — لو تُركت لهدفها الطموح الحقيقي، النتيجة كانت <b>أسوأ بقليل لا أفضل</b> (<span class="en">-46R</span>) لأن الأهداف الحقيقية طموحة جداً وينعكس السعر قبل الوصول لها غالباً.</p>
     <details>
-      <summary>ليش الأنماط (Clusters) ما فرّقت؟ (هذا الجزء صحيح وغير متأثر)</summary>
+      <summary>ليش الأنماط (Clusters) ما فرّقت؟</summary>
       <div class="body">
-        نفس طريقة الخروج فازت بكل الأنماط وكل السنوات — يعني ما في حاجة تصنّف صفقتك، هذا الاستنتاج سليم. أما رقم "<span class="en">56</span> صفقة تأمين حماك" و"<span class="en">20</span> صفقة انقلبت لخسارة" فمتأثر بنفس مشكلة <span class="en">idealTP</span> ويحتاج مراجعة.
+        <span class="en">k=2</span> عنقود (<span class="en">467</span> و<span class="en">294</span> صفقة) — نفس طريقة الخروج ("اترك الصفقة لهدفها الحقيقي") فازت بكل الأنماط وكل السنوات من <span class="en">2020</span> لـ<span class="en">2024</span> على حدة، وبيانات التدريب والتحقق كليهما. يعني ما في حاجة تصنّف صفقتك حسب نمط السوق — نفس القاعدة العامة تكفي.
       </div>
     </details>
     <footer style="margin-top:10px;border:none;padding-top:6px;">
-      التقرير الكامل: <a href="hidden_pattern_report_arabic.md">hidden_pattern_report_arabic.md</a>
+      التقرير الكامل: <a href="hidden_pattern_report_arabic.md">hidden_pattern_report_arabic.md</a> ·
+      <a href="target_or_stop_report_arabic.md">target_or_stop_report_arabic.md</a> ·
+      <a href="eod_target_or_stop_report_arabic.md">eod_target_or_stop_report_arabic.md</a>
     </footer>
   </section>
 
   <section class="card">
-    <h2>3️⃣ حجم الستوب والهدف، الموسمية، والأخبار <span class="badge watch">مؤشرات، بعضها مصحَّح</span></h2>
+    <h2>3️⃣ حجم الستوب والهدف، الموسمية، والأخبار <span class="badge gain">مصحَّح نهائياً</span></h2>
 
     <details open>
       <summary>وقف التداول الشهري</summary>
@@ -264,11 +276,11 @@
     </details>
 
     <details open>
-      <summary>حجم الهدف <span class="badge watch">رقم مصحَّح — نفس المشكلة أعلاه</span></summary>
+      <summary>حجم الهدف <span class="badge gain">مبني على الهدف الحقيقي (<span class="en">maxTP</span>/<span class="en">2R</span>)</span></summary>
       <div class="body">
-        ⚠️ الأرقام الأولى (<span class="en">0%</span> فوز، <span class="en">4%</span> فوز) كانت مضخَّمة لأنها مبنية بشكل كبير على نفس الصفقات المُلوَّثة (فوق). **الرقم الصحيح على البيانات الموثوقة (<span class="en">324</span> صفقة)**: هدف صغير (<span class="en">0.1-0.2×ATR</span>) → فوز <span class="en">15.8%</span> فقط، وكل ما كبر الهدف تحسّن الأداء بثبات لحد <span class="en">88%</span> فوز عند <span class="en">1-2×ATR</span>. <b>الاتجاه العام صحيح ومتّسق، بس بدون الرقم الكارثي "صفر بالمئة".</b>
+        على كل الـ<span class="en">789</span> صفقة (مو بس عيّنة جزئية): هدف صغير (<span class="en">0.10-0.20×ATR</span>، <span class="en">272</span> صفقة) → فوز <span class="en">16.2%</span> فقط، وكل ما كبر الهدف تحسّن الأداء تدريجياً لحد فوز <span class="en">66.7%</span> ومعامل ربح <span class="en">10.9</span> عند <span class="en">0.5-1.0×ATR</span> (<span class="en">24</span> صفقة). ولا صفقة عندها هدف حقيقي أكبر من <span class="en">1×ATR</span>.
         <br><br>
-        بالمنطق المشترك (ستوب × هدف): لما الستوب طبيعي بس الهدف صغير (على البيانات الموثوقة) → فوز <span class="en">31%</span> تقريباً (لا <span class="en">4%</span>) — لسا أضعف من الحالة الطبيعية (<span class="en">76%</span> فوز)، بس مش كارثي.
+        بالمنطق المشترك (ستوب × هدف، حسب حركة كل شهر): لما الستوب طبيعي بس الهدف صغير → فوز <span class="en">21.3%</span> (<span class="en">450</span> صفقة، <span class="en">57%</span> من كل صفقاتك)، مقابل <span class="en">37.2%</span> فوز ومعامل ربح <span class="en">2.36</span> لما يكون الستوب والهدف الاثنين طبيعيين (<span class="en">258</span> صفقة). فرق حقيقي ومتّسق، بس أهدأ من الأرقام المبالَغ فيها سابقاً.
       </div>
     </details>
 
@@ -299,7 +311,7 @@
   </section>
 
   <footer>
-    <b>تحديث</b>: بعد سؤال المستخدم عن منطق "ستوب طبيعي وهدف صغير"، اكتشفنا إن عمود <span class="en">idealTP</span> مُعاد حسابه لـ<span class="en">465</span> صفقة خسرت بالكامل — صحّحنا كل الأرقام المتأثرة بهذا القسم (<span class="en">2</span> و<span class="en">3</span>) أعلاه. التفاصيل الكاملة بـ<code>src/idealtp_data_quality_check.py</code>.
+    <b>تصحيح منهجي شامل</b>: بعد توضيح دقيق منك لتعريف أعمدة الملف، تبيّن إن عمود <span class="en">idealTP</span> **ليس هدفاً إطلاقاً** — هو أعلى سعر وصلته الصفقة قبل ضرب وقف الخسارة الأصلي (<span class="en">MFE</span> قبل الستوب)، وليس "أفضل سعر بأثر رجعي" ولا "هدف مُلوَّث" كما افتُرض بنسخ سابقة. بُني وحدة مرجعية موحّدة (<code>src/target_resolution.py</code>): الهدف الحقيقي = <span class="en">maxTP</span> لما يكون موجوداً (<span class="en">213</span> صفقة فقط)، وإلا ضعف مسافة وقف الخسارة (<span class="en">2R</span>) كحد أدنى افتراضي. طُبِّق هذا التصحيح على **كل ملف بالمشروع** يستخدم مفهوم "الهدف" — بما فيها التقارير أعلاه، وتقارير "الهدف أو الوقف" و"بدون تبييت" المرتبطة تحت. التفاصيل الكاملة بـ<code>src/idealtp_data_quality_check.py</code>.
     <br><br>
     هذا ملخص مبسّط لتسهيل القراءة — كل رقم هون مأخوذ حرفياً من التقارير التقنية الكاملة (روابطها تحت كل قسم)، يلي فيها الجداول والمصادر والتحفظات بالتفصيل. الأرقام بالإنجليزي داخل النص متعمَّد (مش خلل بالتنسيق) — يحل مشكلة اختلاط ترتيب الكلمات بين العربي والإنجليزي والأرقام.
   </footer>

@@ -11,23 +11,30 @@ are used to locate the precise threshold rather than a few coarse bands.
 import numpy as np
 import pandas as pd
 
-from src import config, data_loading, feature_engineering, regime_detection, stats_utils
+from src import config, data_loading, feature_engineering, regime_detection, stats_utils, target_resolution
 
 
 def add_size_pct(trades: pd.DataFrame) -> pd.DataFrame:
-    """Secondary/reference view: raw % of entry price."""
+    """Secondary/reference view: raw % of entry price. TP size uses the
+    resolved real target (maxTP, else a 2R floor) -- NOT idealTP, which is
+    MFE-before-stop rather than a target (see idealtp_data_quality_check.py)."""
+    resolved = target_resolution.resolve_target_series(trades)
     out = trades.copy()
     out["sl_size_pct"] = (out["entryPrice"] - out["initalSL"]).abs() / out["entryPrice"]
-    out["tp_size_pct"] = (out["idealTP"] - out["entryPrice"]).abs() / out["entryPrice"]
+    out["tp_size_pct"] = (resolved["target_price"] - out["entryPrice"]).abs() / out["entryPrice"]
+    out["tp_target_is_real"] = resolved["target_is_real"]
     return out
 
 
 def add_size_atr(trades: pd.DataFrame, candles: pd.DataFrame) -> pd.DataFrame:
     """Primary measure: SL/TP size as a multiple of same-day ATR(14)."""
     feats = feature_engineering.build_features(trades, candles)
+    resolved = target_resolution.resolve_target_series(trades)
     out = trades.copy()
     out["sl_size_atr"] = feats["sl_pct_of_atr"].values
-    out["tp_size_atr"] = (feats["idealTP"] - feats["entryPrice"]).abs().values / feats["atr14_asof_prior_day"].values
+    out["tp_size_atr"] = (resolved["target_price"].values - feats["entryPrice"].values)
+    out["tp_size_atr"] = np.abs(out["tp_size_atr"]) / feats["atr14_asof_prior_day"].values
+    out["tp_target_is_real"] = resolved["target_is_real"].values
     return out
 
 
@@ -72,12 +79,14 @@ def add_size_day_range(trades: pd.DataFrame, candles: pd.DataFrame) -> pd.DataFr
     daily["range_pct"] = (daily["high"] - daily["low"]) / daily["open"]
     daily["date"] = daily["datetime_utc"].dt.normalize()
 
+    resolved = target_resolution.resolve_target_series(trades)
     out = trades.copy()
     out["entry_date"] = out["dateStart_utc"].dt.normalize()
     out = out.merge(daily[["date", "range_pct"]], left_on="entry_date", right_on="date", how="left").drop(columns=["date"])
 
     out["sl_size_day_range"] = (out["entryPrice"] - out["initalSL"]).abs() / out["entryPrice"] / out["range_pct"]
-    out["tp_size_day_range"] = (out["idealTP"] - out["entryPrice"]).abs() / out["entryPrice"] / out["range_pct"]
+    out["tp_size_day_range"] = (resolved["target_price"] - out["entryPrice"]).abs() / out["entryPrice"] / out["range_pct"]
+    out["tp_target_is_real"] = resolved["target_is_real"]
     return out
 
 

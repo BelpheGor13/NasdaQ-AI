@@ -1,7 +1,7 @@
 """Paired bootstrap robustness check (same convention as
 trailing_stop_monte_carlo.py): resample the SAME 789 trades with
-replacement so the baseline and fixed_tp_idealTP profit factors are always
-compared trade-for-trade, not as two independent distributions.
+replacement so the baseline and fixed_tp_real_target profit factors are
+always compared trade-for-trade, not as two independent distributions.
 """
 import numpy as np
 import pandas as pd
@@ -50,7 +50,7 @@ if __name__ == "__main__":
 
     for scenario in ("conservative", "aggressive"):
         base = sim[(sim["scenario"] == scenario) & (sim["strategy"] == "baseline")].sort_values("id")
-        targ = sim[(sim["scenario"] == scenario) & (sim["strategy"] == "fixed_tp_idealTP")].sort_values("id")
+        targ = sim[(sim["scenario"] == scenario) & (sim["strategy"] == "fixed_tp_real_target")].sort_values("id")
         result = bootstrap_pf_ci(targ["exit_r"].values, base["exit_r"].values)
         print(f"=== {scenario} ===")
         for k, v in result.items():

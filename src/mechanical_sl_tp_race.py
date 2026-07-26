@@ -1,8 +1,8 @@
 """Mechanical "which came first" reconstruction, straight from the 1-minute
-candles -- the calculation the user asked for, and the one that does NOT
-depend on any of the unreliable trade-log columns (idealTP / maxTP /
-maxRiskReward are all null-or-zero for exactly the losing and breakeven
-trades we care about; see idealtp_data_quality_check.py).
+candles -- the calculation the user asked for. `run_race_file_target` uses
+each trade's real target (src/target_resolution.py: maxTP when present,
+else a 2R floor) -- never idealTP, which is MFE-before-stop rather than a
+target (see idealtp_data_quality_check.py).
 
 For every trade, we walk forward from dateStart_utc and ask a single
 purely mechanical question: starting from entryPrice, with the ORIGINAL
@@ -28,7 +28,7 @@ Conservative-fill conventions (same as the rest of this project):
 import numpy as np
 import pandas as pd
 
-from src import config, data_loading, stats_utils
+from src import config, data_loading, stats_utils, target_resolution
 
 # Target multiples to race against the original stop. 2.0 first: the user
 # states a >=1:2 R:R house rule, so that is the policy-relevant number.
@@ -155,13 +155,13 @@ def run_race_file_target(trades: pd.DataFrame, candles: pd.DataFrame) -> pd.Data
     """Same race, but using each trade's OWN target from the trade log
     instead of a fixed R multiple -- the version the user asked for.
 
-    Target priority per trade: maxTP when present (it is populated for all
-    213 winners and is a genuine pre-close level), else idealTP (the only
-    column populated for all 789 rows). The `target_source` column records
-    which was used, because idealTP is known to be rewritten to a
-    near-exit value on the 465 full-loss and 93 breakeven trades -- so
-    rows sourced from idealTP on those groups are NOT trustworthy and are
-    flagged rather than silently mixed into the headline.
+    Target priority per trade (src/target_resolution.py, the canonical
+    module used across this project): maxTP when present (populated for
+    all 213 winners closed at real profit), else a 2R floor (double the
+    stop-loss distance) for the remaining 576 trades -- NOT idealTP, which
+    is MFE-before-stop rather than a predetermined target (see
+    idealtp_data_quality_check.py). The `target_source` column records
+    which was used ("maxTP" or "2R_floor").
     """
     ts = candles["datetime_utc"].values
     opens_all = candles["open"].values
@@ -179,11 +179,13 @@ def run_race_file_target(trades: pd.DataFrame, candles: pd.DataFrame) -> pd.Data
     entry_arr = trades["entryPrice"].values
     sl_arr = trades["initalSL"].values
     side_arr = trades["side"].values
-    maxtp_arr = trades["maxTP"].values
-    idealtp_arr = trades["idealTP"].values
     actual_arr = trades["avgRiskReward"].values
     risk_arr = np.abs(entry_arr - sl_arr)
     risk_arr = np.where(risk_arr == 0, np.nan, risk_arr)
+
+    resolved_targets = target_resolution.resolve_target_series(trades)
+    target_price_arr = resolved_targets["target_price"].values
+    target_is_real_arr = resolved_targets["target_is_real"].values
 
     rows = []
     for i in range(len(trades)):
@@ -192,10 +194,8 @@ def run_race_file_target(trades: pd.DataFrame, candles: pd.DataFrame) -> pd.Data
         r_i = risk_arr[i]
         trade_id = trades["id"].iloc[i]
 
-        if not np.isnan(maxtp_arr[i]):
-            target_price, source = maxtp_arr[i], "maxTP"
-        else:
-            target_price, source = idealtp_arr[i], "idealTP"
+        target_price = target_price_arr[i]
+        source = "maxTP" if target_is_real_arr[i] else "2R_floor"
 
         # is this target actually on the profitable side of entry?
         signed = (target_price - entry_arr[i]) if side_arr[i] == "buy" else (entry_arr[i] - target_price)
@@ -242,8 +242,8 @@ def run_race_file_target(trades: pd.DataFrame, candles: pd.DataFrame) -> pd.Data
     out["actual_group"] = np.select(
         [out["actual_r"] == -1.0, out["actual_r"] == 0.0, out["actual_r"] > 0],
         ["full_loss", "breakeven", "winner"], default="partial")
-    # trustworthy only where the target did not come from a rewritten idealTP
-    out["target_trustworthy"] = out["target_source"] == "maxTP"
+    # real target (maxTP) vs the 2R-floor assumption used when no real target was recorded
+    out["target_is_real"] = out["target_source"] == "maxTP"
     return out
 
 
@@ -254,7 +254,7 @@ def summarize_file_target(race_ft: pd.DataFrame) -> pd.DataFrame:
         rows.append({
             "actual_group": grp, "n": len(g),
             "target_source": g["target_source"].mode().iloc[0],
-            "trustworthy_target": bool(g["target_trustworthy"].all()),
+            "target_is_real": bool(g["target_is_real"].all()),
             "pct_target_behind_entry": float(g["target_is_behind_entry"].mean()),
             "median_target_r": float(g["target_r_implied"].median()),
             "pct_hit_target_first": float((resolved["outcome"] == "target").mean()) if len(resolved) else np.nan,
@@ -302,6 +302,6 @@ if __name__ == "__main__":
     print("\n=== at 1:2 (the stated house rule), split by what the trade ACTUALLY did ===")
     print(by_actual_outcome_group(race, trades, target_r=2.0).to_string(index=False))
 
-    print("\n=== USING EACH TRADE'S OWN TARGET FROM THE FILE (maxTP, else idealTP) ===")
+    print("\n=== USING EACH TRADE'S OWN TARGET FROM THE FILE (maxTP, else 2R floor) ===")
     race_ft = run_race_file_target(trades, candles)
     print(summarize_file_target(race_ft).to_string(index=False))

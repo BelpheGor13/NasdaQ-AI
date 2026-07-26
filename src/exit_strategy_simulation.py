@@ -1,8 +1,17 @@
 """Phase 3: unified, no-look-ahead bar-by-bar simulator for every exit
 strategy in the spec (test-only; see hidden-patterns-exit-optimization-
-prompt.md): Fixed TP (idealTP price, 2R/3R/4R), trailing stop (grid reused
+prompt.md): Fixed TP (real target, 2R/3R/4R), trailing stop (grid reused
 from the trailing-stop-optimization analysis), time-based, partial profit-
 taking, and MFE-aware adaptive trailing.
+
+Target resolution uses src/target_resolution.py (maxTP when real, else a
+2R floor) throughout. idealTP is NEVER used as a target anywhere in this
+file -- it is MFE-before-stop data, not a target (confirmed by the user
+and cross-validated against this project's own candle-based MFE
+calculation; see idealtp_data_quality_check.py). An earlier version of
+this file used idealTP directly as the "fixed_tp_idealTP" strategy, which
+was wrong for the 576/789 trades where idealTP does not represent a real
+target.
 
 Shared invariant across every non-baseline strategy: the original initalSL
 always remains an active floor -- these strategies test alternative PROFIT-
@@ -18,9 +27,9 @@ config.EXIT_STRATEGY_MAX_EXTENSION_MINUTES past dateEnd_utc).
 import numpy as np
 import pandas as pd
 
-from src import config, data_loading
+from src import config, data_loading, target_resolution
 
-FIXED_TP_KEYS = ["fixed_tp_idealTP"] + [f"fixed_tp_{int(m)}R" for m in config.FIXED_TP_R_MULTIPLES]
+FIXED_TP_KEYS = ["fixed_tp_real_target"] + [f"fixed_tp_{int(m)}R" for m in config.FIXED_TP_R_MULTIPLES]
 TRAILING_KEYS = [f"trailing_{int(p*100)}pct" for p in config.TRAILING_STOP_GRID]
 TIME_KEYS = [f"time_{h}h" for h in config.TIME_BASED_EXIT_HOURS]
 SINGLE_TRIGGER_STRATEGIES = FIXED_TP_KEYS + TRAILING_KEYS + TIME_KEYS + ["mfe_aware"]
@@ -35,11 +44,11 @@ def _stop_fill(o: float, level: float, is_buy: bool) -> float:
     return level if o <= level else o
 
 
-def _simulate_one_trade(entry, sl, ideal_tp, side, risk, opens, highs, lows, closes, ts, orig_r):
+def _simulate_one_trade(entry, sl, real_target, side, risk, opens, highs, lows, closes, ts, orig_r):
     is_buy = side == "buy"
     sign = 1.0 if is_buy else -1.0
 
-    fixed_tp_targets = {"fixed_tp_idealTP": ideal_tp}
+    fixed_tp_targets = {"fixed_tp_real_target": real_target}
     for m in config.FIXED_TP_R_MULTIPLES:
         fixed_tp_targets[f"fixed_tp_{int(m)}R"] = entry + sign * m * risk
 
@@ -48,7 +57,7 @@ def _simulate_one_trade(entry, sl, ideal_tp, side, risk, opens, highs, lows, clo
 
     partial_targets = []
     for frac, mult in config.PARTIAL_PROFIT_LEGS:
-        level = ideal_tp if mult is None else entry + sign * mult * risk
+        level = real_target if mult is None else entry + sign * mult * risk
         partial_targets.append([frac, level, False, None, None])  # frac, level, done, idx, r
 
     pending = {k: None for k in fixed_tp_targets}
@@ -162,9 +171,11 @@ def simulate_exit_strategies(trades: pd.DataFrame, candles: pd.DataFrame) -> pd.
     end_idx = np.searchsorted(ts, ends, side="right")
     ext_end_idx = np.minimum(np.searchsorted(ts, ends + ext, side="right"), len(ts))
 
+    resolved = target_resolution.resolve_target_series(trades)
     entry_arr = trades["entryPrice"].values
     sl_arr = trades["initalSL"].values
-    ideal_tp_arr = trades["idealTP"].values
+    target_arr = resolved["target_price"].values
+    target_is_real_arr = resolved["target_is_real"].values
     side_arr = trades["side"].values
     risk_arr = np.abs(entry_arr - sl_arr)
     risk_arr = np.where(risk_arr == 0, np.nan, risk_arr)
@@ -182,7 +193,7 @@ def simulate_exit_strategies(trades: pd.DataFrame, candles: pd.DataFrame) -> pd.
             rows.append(dict(id=trade_id, strategy="baseline", scenario=scenario,
                               exit_r=orig_r, triggered=False, unresolved=False))
 
-        if ext_hi <= lo or pd.isna(r_i) or pd.isna(ideal_tp_arr[i]) or orig_len <= 0:
+        if ext_hi <= lo or pd.isna(r_i) or orig_len <= 0:
             for strat in SINGLE_TRIGGER_STRATEGIES + ["partial_profit"]:
                 for scenario in ("conservative", "aggressive"):
                     rows.append(dict(id=trade_id, strategy=strat, scenario=scenario,
@@ -190,7 +201,7 @@ def simulate_exit_strategies(trades: pd.DataFrame, candles: pd.DataFrame) -> pd.
             continue
 
         pending, partial_events = _simulate_one_trade(
-            entry_arr[i], sl_arr[i], ideal_tp_arr[i], side_arr[i], r_i,
+            entry_arr[i], sl_arr[i], target_arr[i], side_arr[i], r_i,
             opens_all[lo:ext_hi], highs_all[lo:ext_hi], lows_all[lo:ext_hi], closes_all[lo:ext_hi],
             ts[lo:ext_hi], orig_r,
         )
@@ -232,6 +243,7 @@ def simulate_exit_strategies(trades: pd.DataFrame, candles: pd.DataFrame) -> pd.
     meta = trades[["id", "dateStart_utc", "dateEnd_utc", "side", "amount", "avgRiskReward"]].rename(
         columns={"avgRiskReward": "orig_r"})
     meta["risk_price"] = np.abs(trades["entryPrice"] - trades["initalSL"])
+    meta["target_is_real"] = target_is_real_arr
     out = out.merge(meta, on="id", how="left")
     out["exit_pnl_usd"] = out["exit_r"] * out["risk_price"] * out["amount"]
     out["month"] = out["dateStart_utc"].dt.to_period("M").astype(str)

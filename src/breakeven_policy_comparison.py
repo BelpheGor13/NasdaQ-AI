@@ -26,24 +26,21 @@ Conventions, identical across all policies so the comparison is fair:
     the trade's own dateEnd_utc; anything still unresolved is reported as
     such rather than scored.
 
-Target source is recorded per trade. maxTP is populated for all 213
-winners and is a genuine level; idealTP is the only column present on the
-other 576 rows but is known to be rewritten at close (see
-idealtp_data_quality_check.py), so those rows carry target_trustworthy=False
-and are reported separately instead of being folded into the headline.
+Target source is recorded per trade via src/target_resolution.py (the
+canonical module used across this project): maxTP is populated for all 213
+winners and is a genuine level; the other 576 rows use a 2R floor (double
+the stop-loss distance) instead, since their real target was never reached
+and is not recorded -- NOT idealTP, which is MFE-before-stop rather than a
+predetermined target (see idealtp_data_quality_check.py). Those 576 rows
+carry target_is_real=False and are reported separately instead of being
+folded into the headline as if verified.
 """
 import numpy as np
 import pandas as pd
 
-from src import config, data_loading, stats_utils
+from src import config, data_loading, stats_utils, target_resolution
 
 BREAKEVEN_TRIGGER_R = 2.0
-
-
-def _resolve_target(row_maxtp, row_idealtp):
-    if not np.isnan(row_maxtp):
-        return row_maxtp, "maxTP", True
-    return row_idealtp, "idealTP", False
 
 
 def median_real_target_r(trades: pd.DataFrame) -> float:
@@ -77,6 +74,8 @@ def simulate_policies(trades: pd.DataFrame, candles: pd.DataFrame,
     start_idx = np.searchsorted(ts, starts, side="left")
     ext_end_idx = np.minimum(np.searchsorted(ts, ends + ext, side="right"), len(ts))
 
+    resolved_targets = target_resolution.resolve_target_series(trades)
+
     rows = []
     for i in range(len(trades)):
         t = trades.iloc[i]
@@ -87,16 +86,18 @@ def simulate_policies(trades: pd.DataFrame, candles: pd.DataFrame,
         is_buy = side == "buy"
         if uniform_target_r is not None:
             target = entry + uniform_target_r * risk if is_buy else entry - uniform_target_r * risk
-            target_source, trustworthy = f"uniform_{uniform_target_r:g}R", True
+            target_source, is_real = f"uniform_{uniform_target_r:g}R", True
         else:
-            target, target_source, trustworthy = _resolve_target(t["maxTP"], t["idealTP"])
+            target = resolved_targets["target_price"].iloc[i]
+            is_real = bool(resolved_targets["target_is_real"].iloc[i])
+            target_source = "maxTP" if is_real else "2R_floor"
         signed_target = (target - entry) if is_buy else (entry - target)
         target_r = signed_target / risk if risk > 0 else np.nan
 
         base = dict(
             id=t["id"], dateStart_utc=t["dateStart_utc"], side=side,
             entryPrice=entry, initalSL=sl, target_price=target,
-            target_source=target_source, target_trustworthy=trustworthy,
+            target_source=target_source, target_is_real=is_real,
             target_r=target_r, risk_price=risk, amount=t["amount"],
             actual_r=t["avgRiskReward"],
         )
@@ -175,7 +176,7 @@ def max_drawdown_r(series: np.ndarray) -> float:
 
 
 def headline_table(sim: pd.DataFrame, trustworthy_only: bool = False) -> pd.DataFrame:
-    d = sim[sim["target_trustworthy"]] if trustworthy_only else sim
+    d = sim[sim["target_is_real"]] if trustworthy_only else sim
     d = d[(d["leave_outcome"] != "unresolved") & (d["be_outcome"] != "unresolved")]
 
     rows = []
@@ -219,7 +220,7 @@ if __name__ == "__main__":
     candles = data_loading.load_candles()
     sim = simulate_policies(trades, candles)
 
-    print("=== ALL 789 TRADES (includes untrustworthy idealTP targets) ===")
+    print("=== ALL 789 TRADES (maxTP where real, else 2R floor) ===")
     print(headline_table(sim).to_string(index=False))
 
     med = median_real_target_r(trades)

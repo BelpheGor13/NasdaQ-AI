@@ -1,12 +1,17 @@
 """Direct follow-up to the target-or-stop finding, with a constraint the
 user specified: never hold a position overnight. Each trade is left to
-run toward its original stop or idealTP target, exactly like
-exit_strategy_simulation.py's fixed_tp_idealTP -- EXCEPT it is also
-force-closed at market at a fixed deadline (default 16:00 America/New_York,
-the user's choice) on the SAME calendar day it was entered, if neither
-level has been touched by then. No extension past that deadline, ever --
-this is a same-day-only rule, unlike the other analyses' multi-day
-extension windows.
+run toward its original stop or its real target -- src/target_resolution.py:
+maxTP when present (213 trades closed at real profit), else a 2R floor for
+the remaining 576 -- exactly like exit_strategy_simulation.py's
+fixed_tp_real_target strategy, EXCEPT it is also force-closed at market at
+a fixed deadline (default 16:00 America/New_York, the user's choice) on the
+SAME calendar day it was entered, if neither level has been touched by
+then. No extension past that deadline, ever -- this is a same-day-only
+rule, unlike the other analyses' multi-day extension windows.
+
+NOT idealTP: that column is MFE-before-stop (the best price reached before
+the ORIGINAL stop was hit), not a predetermined target -- see
+idealtp_data_quality_check.py.
 
 Tie-break when both stop and target fall inside the same 1-minute candle:
 target wins (documented, same convention as exit_strategy_simulation.py --
@@ -16,7 +21,7 @@ by low single-digit percent at most).
 import numpy as np
 import pandas as pd
 
-from src import data_loading
+from src import data_loading, target_resolution
 
 DEFAULT_DEADLINE_HOUR_NY = 16
 
@@ -41,7 +46,7 @@ def simulate_eod_target_or_stop(trades: pd.DataFrame, candles: pd.DataFrame,
 
     entry_arr = trades["entryPrice"].values
     sl_arr = trades["initalSL"].values
-    tp_arr = trades["idealTP"].values
+    tp_arr = target_resolution.resolve_target_series(trades)["target_price"].values
     side_arr = trades["side"].values
     orig_r_arr = trades["avgRiskReward"].values
     risk_arr = np.abs(entry_arr - sl_arr)

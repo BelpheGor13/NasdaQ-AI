@@ -30,7 +30,7 @@ def paired_tests(baseline_r: np.ndarray, target_r: np.ndarray) -> dict:
 
 
 def significance_for_scenario(sim: pd.DataFrame, scenario: str = "conservative",
-                               strategy: str = "fixed_tp_idealTP") -> dict:
+                               strategy: str = "fixed_tp_real_target") -> dict:
     base = sim[(sim["scenario"] == scenario) & (sim["strategy"] == "baseline")].sort_values("id")
     targ = sim[(sim["scenario"] == scenario) & (sim["strategy"] == strategy)].sort_values("id")
     assert list(base["id"]) == list(targ["id"]), "trade ids must align for a paired test"

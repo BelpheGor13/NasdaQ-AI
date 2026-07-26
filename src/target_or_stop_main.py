@@ -32,10 +32,10 @@ def main():
         sig[scenario] = target_or_stop_significance.significance_for_scenario(sim, scenario=scenario)
 
         base = sim[(sim["scenario"] == scenario) & (sim["strategy"] == "baseline")].sort_values("id")
-        targ = sim[(sim["scenario"] == scenario) & (sim["strategy"] == "fixed_tp_idealTP")].sort_values("id")
+        targ = sim[(sim["scenario"] == scenario) & (sim["strategy"] == "fixed_tp_real_target")].sort_values("id")
         mc[scenario] = target_or_stop_monte_carlo.bootstrap_pf_ci(targ["exit_r"].values, base["exit_r"].values)
         pct_unresolved[scenario] = float(
-            sim[(sim["scenario"] == scenario) & (sim["strategy"] == "fixed_tp_idealTP")]["unresolved"].mean())
+            sim[(sim["scenario"] == scenario) & (sim["strategy"] == "fixed_tp_real_target")]["unresolved"].mean())
 
         tables[scenario].to_csv(config.DATA_OUT / f"target_or_stop_table_{scenario}.csv", index=False)
 
@@ -44,7 +44,7 @@ def main():
         target_or_stop_visualizations.plot_equity_comparison(sim, scenario)
         target_or_stop_visualizations.plot_strategy_comparison(tables[scenario], scenario)
     base_cons = sim[(sim["scenario"] == "conservative") & (sim["strategy"] == "baseline")].sort_values("id")
-    targ_cons = sim[(sim["scenario"] == "conservative") & (sim["strategy"] == "fixed_tp_idealTP")].sort_values("id")
+    targ_cons = sim[(sim["scenario"] == "conservative") & (sim["strategy"] == "fixed_tp_real_target")].sort_values("id")
     target_or_stop_visualizations.plot_bootstrap_pf(targ_cons["exit_r"].values, base_cons["exit_r"].values)
 
     print("[4/4] Arabic report...")

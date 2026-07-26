@@ -17,7 +17,7 @@ in CLUSTERING_FEATURES is provably computable strictly before dateStart_utc.
 import numpy as np
 import pandas as pd
 
-from src import data_loading, excursion, feature_engineering, regime_detection
+from src import data_loading, excursion, feature_engineering, regime_detection, target_resolution
 
 BODY_WICK_LOOKBACK = 5  # candles immediately before entry (spec: "5 candles before entry")
 VOLUME_LOOKBACK_MIN = 30
@@ -138,10 +138,13 @@ def add_previous_trade_outcome(trades: pd.DataFrame) -> pd.DataFrame:
 
 
 def add_risk_reward_setup(trades: pd.DataFrame) -> pd.DataFrame:
+    """Uses target_resolution (maxTP when real, else a 2R floor) -- NOT
+    idealTP, which is MFE-before-stop rather than a target (see
+    idealtp_data_quality_check.py)."""
+    resolved = target_resolution.resolve_target_series(trades)
     out = trades.copy()
-    risk = (out["entryPrice"] - out["initalSL"]).abs()
-    reward = np.where(out["side"] == "buy", out["idealTP"] - out["entryPrice"], out["entryPrice"] - out["idealTP"])
-    out["risk_reward_setup"] = reward / risk.replace(0, np.nan)
+    out["risk_reward_setup"] = target_resolution.target_r_multiple(resolved)
+    out["risk_reward_setup_is_real_target"] = resolved["target_is_real"]
     return out
 
 
