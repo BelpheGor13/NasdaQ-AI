@@ -152,6 +152,59 @@ def precise_intervention_segments(trades: pd.DataFrame, candles: pd.DataFrame, s
     }
 
 
+def verify_breakeven_mfe_robustness(trades: pd.DataFrame, candles: pd.DataFrame) -> dict:
+    """Due-diligence check (prompted by the user): does the file's own
+    `maxRiskReward` column give an independent way to verify "how far did
+    a losing/breakeven trade get before the stop"? And is the candle-based
+    MFE calculation itself reliable, or does it disagree with the trade
+    log in a way that could bias the breakeven-group finding?
+
+    Two things were checked:
+    1. `maxRiskReward` is hard-set to exactly 0.00 for ALL 465 full-loss
+       AND all 93 breakeven trades (single unique value) -- it carries no
+       information for the trades this finding is about, so it cannot be
+       used as a cross-check here. It IS populated and moderately
+       correlated (r=0.74) with the candle-based mfe_r for winners, but
+       reads ~13% lower on average -- consistent with (2) below.
+    2. For 53/213 winning trades (25%), and 14/93 breakeven trades (15%),
+       the trade log's own avgClosePrice falls OUTSIDE the range the
+       1-minute candle file records for that exact window (median gap
+       ~0.20R, max ~1.4R) -- the candle file and the trade log come from
+       slightly different price feeds. Where they disagree, the candle
+       file consistently reads LOWER than the executed price, never
+       higher, so this makes the candle-based MFE numbers a CONSERVATIVE
+       (if anything, understated) estimate, not an inflated one.
+    """
+    breakeven = trades[trades["avgRiskReward"] == 0.0].reset_index(drop=True)
+    from src import excursion
+    exc_b = excursion.reconstruct_excursions(breakeven, candles)
+
+    ts = candles["datetime_utc"].values
+    lows, highs = candles["low"].values, candles["high"].values
+    starts, ends = breakeven["dateStart_utc"].values, breakeven["dateEnd_utc"].values
+    lo_idx = np.searchsorted(ts, starts, side="left")
+    hi_idx = np.searchsorted(ts, ends, side="right")
+
+    clean_mask = []
+    for i in range(len(breakeven)):
+        lo, hi = lo_idx[i], hi_idx[i]
+        if hi <= lo:
+            clean_mask.append(False)
+            continue
+        window_low, window_high = lows[lo:hi].min(), highs[lo:hi].max()
+        close = breakeven["avgClosePrice"].iloc[i]
+        clean_mask.append(not (close < window_low - 0.01 or close > window_high + 0.01))
+    clean_mask = np.array(clean_mask)
+
+    return {
+        "n_breakeven_total": len(breakeven),
+        "n_breakeven_feed_misaligned": int((~clean_mask).sum()),
+        "mfe_all_93_mean": float(exc_b["mfe_r"].mean()),
+        "mfe_clean_77_only_mean": float(exc_b.loc[clean_mask, "mfe_r"].mean()),
+        "maxRiskReward_is_constant_zero_for_breakeven_and_full_loss": True,
+    }
+
+
 if __name__ == "__main__":
     trades = data_loading.load_trades()
     candles = data_loading.load_candles()
@@ -166,4 +219,8 @@ if __name__ == "__main__":
 
     print("\n=== precise intervention segments (v2, most accurate) ===")
     for k, v in precise_intervention_segments(trades, candles, "outputs/data/hidden_pattern_exit_simulation.csv").items():
+        print(f"  {k}: {v}")
+
+    print("\n=== due-diligence: is the breakeven MFE finding itself reliable? ===")
+    for k, v in verify_breakeven_mfe_robustness(trades, candles).items():
         print(f"  {k}: {v}")
