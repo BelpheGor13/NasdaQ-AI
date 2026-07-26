@@ -184,10 +184,10 @@
   </header>
 
   <div class="verdict-grid">
-    <div class="verdict watch">
-      <span class="icon">⚠️</span>
-      <div class="title">"التزم بهدفك" — رقم مصحَّح، الأثر ضعيف</div>
-      <div class="desc">الرقم الأول (<span class="en">+176,787$</span>) كان خطأ بسبب مشكلة بالبيانات. بعد التصحيح: فرق ضئيل (<span class="en">+10.5R</span> فقط على البيانات الموثوقة).</div>
+    <div class="verdict loss">
+      <span class="icon">❌</span>
+      <div class="title">لا تحرّك الستوب للتعادل (Breakeven)</div>
+      <div class="desc"><span class="en">93</span> صفقة كانت رابحة <span class="en">+2.09R</span> بالمتوسط بأعلى نقطة، وانتهت كلها عند <span class="en">0$</span> بالضبط بسبب تحريك الستوب. هذا الاكتشاف الحقيقي الأقوى (تصحيح لما قيل سابقاً).</div>
     </div>
     <div class="verdict loss">
       <span class="icon">❌</span>
@@ -225,21 +225,23 @@
   </section>
 
   <section class="card">
-    <h2>2️⃣ الأنماط المخفية + الالتزام بالهدف <span class="badge watch">تم تصحيح الرقم</span></h2>
+    <h2>2️⃣ الأنماط المخفية + قصة الهدف والتعادل <span class="badge loss">تصحيح نهائي (v2)</span></h2>
     <p class="lede">قسّمنا صفقاتك لمجموعتين حسب حالة السوق وقت الدخول، وجرّبنا <span class="en">19</span> طريقة خروج مختلفة على كل مجموعة.</p>
-    <div class="body" style="background:var(--watch-bg);border:1px solid var(--watch);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:13.5px;">
-      <b>⚠️ تصحيح</b>: الأرقام تحت (<span class="en">+176,787$</span>, معامل ربح <span class="en">2.35</span>) كانت مبنية على عمود <span class="en">idealTP</span> المُلوَّث لـ<span class="en">465</span> صفقة (<span class="en">59%</span>) — القيمة فيه لهذه الصفقات مُعادة الحساب بعد الخسارة، مش الهدف الحقيقي وقت الدخول. الجدول تحت مُصحَّح الآن على <span class="en">324</span> صفقة موثوقة فقط.
-    </div>
-    <div class="stat-row">
-      <div class="stat"><span class="num">+<span class="en">10.5R</span></span><span class="lbl">الفرق الحقيقي (لا <span class="en">+346R</span>)</span></div>
-      <div class="stat"><span class="num loss">معامل الربح <span class="en">71.5</span> → <span class="en">16.0</span></span><span class="lbl">أسوأ فعلياً</span></div>
+    <div class="body" style="background:var(--loss-bg);border:1px solid var(--loss);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:13.5px;">
+      <b>⚠️ تصحيح نهائي</b>: كل الأرقام السابقة (<span class="en">+176,787$</span>، وحتى <span class="en">+10.5R</span> من التصحيح الأول) كانت مبنية جزئياً على <span class="en">idealTP</span> المُلوَّث. بعد فحص أعمق (سؤالك "ليش صار هيك؟")، لقينا إن الملوَّث كمان يشمل صفقات التعادل التام (<span class="en">93</span> صفقة) مش بس الخسارة الكاملة. التقسيم الدقيق النهائي تحت، وهو مبني على بيانات نظيفة <span class="en">100%</span> (مافي أي استخدام لـ<span class="en">idealTP</span> الملوَّث).
     </div>
     <table>
-      <tr><th>المقياس</th><th>الأصلي (<span class="en">324</span> موثوقة)</th><th>لو التزمت بالهدف</th></tr>
-      <tr><td>معدل الفوز</td><td>65.7%</td><td class="pos">70.4%</td></tr>
-      <tr><td>العائد المتوقع لكل صفقة</td><td>1.70R</td><td>1.73R</td></tr>
-      <tr><td>إجمالي الربح (<span class="en">324</span> صفقة)</td><td>549.9R</td><td>560.3R</td></tr>
+      <tr><th>المجموعة</th><th>العدد</th><th>الوصف</th></tr>
+      <tr><td>خسارة كاملة ميكانيكية</td><td>465</td><td>ضربت الستوب الأصلي بدون تدخّل</td></tr>
+      <tr><td class="neg">تعادل تام (تدخّل يدوي واضح)</td><td class="neg">93</td><td class="neg">حُرِّك الستوب للتعادل</td></tr>
+      <tr><td>وصلت لهدفها الحقيقي تقريباً</td><td>16</td><td>لا مجال كبير للتحسين</td></tr>
+      <tr><td>إغلاق مبكر حقيقي</td><td>197</td><td>الوحيدة القابلة لاختبار "ليش أقفلت بدري"</td></tr>
     </table>
+    <div class="stat-row">
+      <div class="stat"><span class="num loss">+<span class="en">2.09R</span></span><span class="lbl">متوسط أعلى ربح لصفقات التعادل، قبل ما ترجع لـ<span class="en">0$</span></span></div>
+      <div class="stat"><span class="num loss">~<span class="en">95R</span></span><span class="lbl">فرصة ضائعة حقيقية (نصف القمة، تقدير متحفظ)</span></div>
+    </div>
+    <p style="font-size:13.5px;">أما الـ<span class="en">197</span> صفقة "إغلاق مبكر حقيقي" — لو تُركت لهدفها الطموح الحقيقي، النتيجة كانت <b>أسوأ بقليل لا أفضل</b> (<span class="en">-46R</span>) لأن الأهداف الحقيقية طموحة جداً وينعكس السعر قبل الوصول لها غالباً.</p>
     <details>
       <summary>ليش الأنماط (Clusters) ما فرّقت؟ (هذا الجزء صحيح وغير متأثر)</summary>
       <div class="body">

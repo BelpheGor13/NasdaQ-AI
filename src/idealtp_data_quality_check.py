@@ -91,8 +91,70 @@ def corrected_tp_effect(trades: pd.DataFrame, sim_csv_path: str) -> dict:
     }
 
 
+def precise_intervention_segments(trades: pd.DataFrame, candles: pd.DataFrame, sim_csv_path: str) -> dict:
+    """Refined version (v2): the first correction used avgRiskReward !=
+    -1.0 as the 'trustworthy' cutoff, which still included the 93 exact-
+    breakeven trades -- maxTP turns out to be null for those too (same
+    corruption signature as the full-stop-loss rows), so they were
+    incorrectly counted as trustworthy. This splits the 789 trades into
+    four groups by observable evidence of manual intervention:
+
+      A. avgRiskReward == -1.0 (465): hit the ORIGINAL initalSL exactly --
+         mechanical, untouched. idealTP untrustworthy (maxTP null).
+      B. avgRiskReward == 0.0 exactly (93): breakeven-exact is a strong
+         signature of a manually-moved stop -- untouched trades essentially
+         never close at exactly zero by chance. idealTP untrustworthy here
+         too (maxTP also null) so it can't be used, but excursion.py's own
+         MFE (computed independently of idealTP, straight from candles) can:
+         it shows what these trades were worth at their peak before being
+         given back to exactly zero.
+      C1. Remaining trades that closed at >=90% of their OWN idealTP-implied
+          target (16): already ran close to the real target, little room.
+      C2. Remaining trades that closed at <90% of their target (197):
+          genuine early-close signal on trustworthy idealTP data -- this is
+          the only group where "let it ride to idealTP" is a fair test.
+    """
+    entry, sl, tp, side = trades["entryPrice"], trades["initalSL"], trades["idealTP"], trades["side"]
+    risk = (entry - sl).abs()
+    reward = np.where(side == "buy", tp - entry, entry - tp)
+    t = trades.copy()
+    t["computed_rr"] = reward / risk
+    t["maxtp_null"] = t["maxTP"].isnull()
+
+    group_a = t[t["avgRiskReward"] == -1.0]
+    group_b = t[t["avgRiskReward"] == 0.0]
+    other = t[(t["avgRiskReward"] != -1.0) & (t["avgRiskReward"] != 0.0)].copy()
+    other["pct_of_target"] = other["avgRiskReward"] / other["computed_rr"]
+    other_clean = other[~other["maxtp_null"]]
+    group_c1 = other_clean[other_clean["pct_of_target"] >= 0.90]
+    group_c2 = other_clean[other_clean["pct_of_target"] < 0.90]
+
+    from src import excursion
+    exc = excursion.reconstruct_excursions(trades, candles)
+    mfe_b = exc[exc["id"].isin(group_b["id"])]["mfe_r"]
+
+    sim = pd.read_csv(sim_csv_path)
+    idealtp_sim = sim[(sim["strategy"] == "fixed_tp_idealTP") & (sim["scenario"] == "conservative")]
+    c2_sim = idealtp_sim[idealtp_sim["id"].isin(group_c2["id"])].sort_values("id")
+    c2_actual = group_c2.sort_values("id")["avgRiskReward"]
+
+    return {
+        "n_group_a_mechanical_full_sl": len(group_a),
+        "n_group_b_breakeven_manual": len(group_b),
+        "n_group_c1_ran_near_target": len(group_c1),
+        "n_group_c2_genuine_early_close": len(group_c2),
+        "group_b_mean_mfe_r_given_back_to_zero": float(mfe_b.mean()),
+        "group_b_total_mfe_r_given_back": float(mfe_b.sum()),
+        "group_b_pct_with_mfe_above_1R": float((mfe_b >= 1.0).mean()),
+        "group_c2_actual_total_r": float(c2_actual.sum()),
+        "group_c2_if_ran_to_real_target_total_r": float(c2_sim["exit_r"].sum()),
+        "group_c2_genuine_r_left_on_table": float(c2_sim["exit_r"].sum() - c2_actual.sum()),
+    }
+
+
 if __name__ == "__main__":
     trades = data_loading.load_trades()
+    candles = data_loading.load_candles()
 
     print("=== corruption summary ===")
     for k, v in summarize_corruption(trades).items():
@@ -102,6 +164,6 @@ if __name__ == "__main__":
     for k, v in quantify_impact_on_hidden_pattern_finding("outputs/data/hidden_pattern_exit_simulation.csv", trades).items():
         print(f"  {k}: {v}")
 
-    print("\n=== corrected (honest) effect, clean subset only ===")
-    for k, v in corrected_tp_effect(trades, "outputs/data/hidden_pattern_exit_simulation.csv").items():
+    print("\n=== precise intervention segments (v2, most accurate) ===")
+    for k, v in precise_intervention_segments(trades, candles, "outputs/data/hidden_pattern_exit_simulation.csv").items():
         print(f"  {k}: {v}")
