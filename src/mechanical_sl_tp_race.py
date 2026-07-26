@@ -151,6 +151,121 @@ def summarize(race: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def run_race_file_target(trades: pd.DataFrame, candles: pd.DataFrame) -> pd.DataFrame:
+    """Same race, but using each trade's OWN target from the trade log
+    instead of a fixed R multiple -- the version the user asked for.
+
+    Target priority per trade: maxTP when present (it is populated for all
+    213 winners and is a genuine pre-close level), else idealTP (the only
+    column populated for all 789 rows). The `target_source` column records
+    which was used, because idealTP is known to be rewritten to a
+    near-exit value on the 465 full-loss and 93 breakeven trades -- so
+    rows sourced from idealTP on those groups are NOT trustworthy and are
+    flagged rather than silently mixed into the headline.
+    """
+    ts = candles["datetime_utc"].values
+    opens_all = candles["open"].values
+    highs_all = candles["high"].values
+    lows_all = candles["low"].values
+
+    starts = trades["dateStart_utc"].values
+    ends = trades["dateEnd_utc"].values
+    ext = np.timedelta64(config.EXIT_STRATEGY_MAX_EXTENSION_MINUTES, "m")
+
+    start_idx = np.searchsorted(ts, starts, side="left")
+    end_idx = np.searchsorted(ts, ends, side="right")
+    ext_end_idx = np.minimum(np.searchsorted(ts, ends + ext, side="right"), len(ts))
+
+    entry_arr = trades["entryPrice"].values
+    sl_arr = trades["initalSL"].values
+    side_arr = trades["side"].values
+    maxtp_arr = trades["maxTP"].values
+    idealtp_arr = trades["idealTP"].values
+    actual_arr = trades["avgRiskReward"].values
+    risk_arr = np.abs(entry_arr - sl_arr)
+    risk_arr = np.where(risk_arr == 0, np.nan, risk_arr)
+
+    rows = []
+    for i in range(len(trades)):
+        lo, hi, ext_hi = start_idx[i], end_idx[i], ext_end_idx[i]
+        orig_len = hi - lo
+        r_i = risk_arr[i]
+        trade_id = trades["id"].iloc[i]
+
+        if not np.isnan(maxtp_arr[i]):
+            target_price, source = maxtp_arr[i], "maxTP"
+        else:
+            target_price, source = idealtp_arr[i], "idealTP"
+
+        # is this target actually on the profitable side of entry?
+        signed = (target_price - entry_arr[i]) if side_arr[i] == "buy" else (entry_arr[i] - target_price)
+        target_r_implied = signed / r_i if not np.isnan(r_i) else np.nan
+
+        base = dict(id=trade_id, target_source=source, target_price=target_price,
+                    target_r_implied=target_r_implied, actual_r=actual_arr[i],
+                    target_is_behind_entry=bool(signed <= 0))
+
+        if ext_hi <= lo or np.isnan(r_i) or np.isnan(target_price):
+            rows.append(dict(base, outcome="unresolved", race_r=np.nan,
+                             bars_to_resolution=np.nan, resolved_within_original_window=False))
+            continue
+
+        is_buy = side_arr[i] == "buy"
+        outcome, r, idx, within = "unresolved", np.nan, -1, False
+        for k in range(ext_hi - lo):
+            o, h, l = opens_all[lo + k], highs_all[lo + k], lows_all[lo + k]
+            hit_stop = (l <= sl_arr[i]) if is_buy else (h >= sl_arr[i])
+            hit_target = (h >= target_price) if is_buy else (l <= target_price)
+
+            if hit_stop:  # conservative: stop wins ambiguous bars
+                fill = sl_arr[i] if (o >= sl_arr[i] if is_buy else o <= sl_arr[i]) else o
+                outcome = "stop"
+            elif hit_target:
+                fill = target_price if (o <= target_price if is_buy else o >= target_price) else o
+                outcome = "target"
+            else:
+                continue
+            r = (fill - entry_arr[i]) / r_i if is_buy else (entry_arr[i] - fill) / r_i
+            idx, within = k, k < orig_len
+            break
+
+        rows.append(dict(base, outcome=outcome, race_r=r,
+                         bars_to_resolution=idx if idx >= 0 else np.nan,
+                         resolved_within_original_window=within))
+
+    out = pd.DataFrame(rows)
+    meta = trades[["id", "dateStart_utc", "side", "amount"]].copy()
+    meta["risk_price"] = np.abs(trades["entryPrice"] - trades["initalSL"])
+    out = out.merge(meta, on="id", how="left")
+    out["race_pnl_usd"] = out["race_r"] * out["risk_price"] * out["amount"]
+    out["actual_pnl_usd"] = out["actual_r"] * out["risk_price"] * out["amount"]
+    out["actual_group"] = np.select(
+        [out["actual_r"] == -1.0, out["actual_r"] == 0.0, out["actual_r"] > 0],
+        ["full_loss", "breakeven", "winner"], default="partial")
+    # trustworthy only where the target did not come from a rewritten idealTP
+    out["target_trustworthy"] = out["target_source"] == "maxTP"
+    return out
+
+
+def summarize_file_target(race_ft: pd.DataFrame) -> pd.DataFrame:
+    rows = []
+    for grp, g in race_ft.groupby("actual_group"):
+        resolved = g[g["outcome"] != "unresolved"]
+        rows.append({
+            "actual_group": grp, "n": len(g),
+            "target_source": g["target_source"].mode().iloc[0],
+            "trustworthy_target": bool(g["target_trustworthy"].all()),
+            "pct_target_behind_entry": float(g["target_is_behind_entry"].mean()),
+            "median_target_r": float(g["target_r_implied"].median()),
+            "pct_hit_target_first": float((resolved["outcome"] == "target").mean()) if len(resolved) else np.nan,
+            "actual_total_r": float(g["actual_r"].sum()),
+            "mechanical_total_r": float(resolved["race_r"].sum()),
+            "difference_r": float(resolved["race_r"].sum() - g["actual_r"].sum()),
+            "difference_usd": float(resolved["race_pnl_usd"].sum() - g["actual_pnl_usd"].sum()),
+        })
+    return pd.DataFrame(rows).sort_values("difference_r")
+
+
 def by_actual_outcome_group(race: pd.DataFrame, trades: pd.DataFrame, target_r: float = 2.0) -> pd.DataFrame:
     """The part the user actually cares about: split by what the trade
     REALLY did, and show what leaving it alone would have done instead.
@@ -186,3 +301,7 @@ if __name__ == "__main__":
 
     print("\n=== at 1:2 (the stated house rule), split by what the trade ACTUALLY did ===")
     print(by_actual_outcome_group(race, trades, target_r=2.0).to_string(index=False))
+
+    print("\n=== USING EACH TRADE'S OWN TARGET FROM THE FILE (maxTP, else idealTP) ===")
+    race_ft = run_race_file_target(trades, candles)
+    print(summarize_file_target(race_ft).to_string(index=False))
