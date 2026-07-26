@@ -1,25 +1,42 @@
-"""Data-quality finding (discovered after user pushback on the hidden-
-pattern report): `idealTP` is NOT a stable pre-entry target for every
-trade. For every trade where avgRiskReward == -1.0 (a full stop-loss
-exit, 465 / 789 trades = 59%), idealTP has been reset to a value close to
-the actual exit rather than preserving whatever target was set at entry --
-tells: maxTP is null for 100% of these rows and non-null for 100% of
-winners, and the idealTP-implied R:R is < 2 for 458 of these 465 rows
-(median ~ -0.3 to -0.9R, i.e. ON THE LOSING SIDE of entry), while for the
-other 324 trades idealTP-implied R:R has median 4.57 and is >= 2 for 86%
-of rows -- consistent with the user's stated house rule of a >=1:2 minimum
-R:R set at entry.
+"""Column semantics, corrected by the user directly and confirmed against
+the data below -- this supersedes the earlier "idealTP is corrupted"
+framing in this module and in hidden_pattern_report_arabic.md:
 
-initalSL was checked and is NOT affected (0 nulls, always on the correct
-side of entry for its trade direction) -- only idealTP is corrupted, and
-only for full-stop-loss trades.
+  initalSL      the trade's stop-loss price.
+  entryPrice    the trade's entry price.
+  maxTP         the REAL, original target for the trade. Present for all
+                213 trades that closed with a realized profit
+                (avgRiskReward > 0); absent for the other 576. For those
+                576, the user's own rule is to assume AT LEAST double the
+                stop-loss distance (2R) as a stand-in target, since the
+                true original target was not recorded for a trade that
+                never reached it.
+  idealTP       NOT a target at all. It is the price the trade reached
+                (its MFE) BEFORE it eventually hit initalSL. This was
+                previously (wrongly) treated as a corrupted/rewritten
+                target in this file; it is in fact a distinct, valid
+                field once understood correctly.
+  avgClosePrice the trade's actual realized close price.
+  avgRiskReward the realized R-multiple computed from avgClosePrice
+                against initalSL/entryPrice -- i.e. what actually
+                happened, not a setup ratio.
 
-Practical consequence: any analysis that used idealTP as if it were a
-reliable pre-entry value (the "let it ride to idealTP" exit-strategy
-result in hidden_pattern_report_arabic.md, and the TP-size-based findings
-in pattern_deepdive_report_arabic.md) is invalid for the 465 corrupted
-rows. This module quantifies the impact and provides the corrected,
-clean-subset-only numbers.
+Verification (idealTP-implied R vs our own independent candle-based MFE
+from excursion.py -- two different sources, expected to roughly agree if
+the corrected reading is right):
+
+  group        idealTP-implied R (median)   candle-based mfe_r (median)
+  breakeven    2.37R                        2.09R
+  full_loss    0.48R                        0.43R
+
+Close agreement in both groups confirms idealTP is genuine MFE-before-
+stop data, not corrupted. Everything below that quantifies "impact" and
+computes "corrected" numbers is still useful as a record of the earlier
+(mistaken) framing and the arithmetic under it, but should be read with
+this corrected understanding of what idealTP actually represents.
+
+initalSL remains fully clean (0 nulls, always on the correct side of
+entry for its trade direction).
 """
 import numpy as np
 import pandas as pd
