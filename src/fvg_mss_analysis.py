@@ -28,10 +28,27 @@ its displacement leg left behind, and find the first time price re-tests
 the NEAR edge of that FVG (the edge closest to the continuation --
 confirmed with the user: first-touch entry, not the 50% equilibrium)
 BEFORE the trade's actual entry timestamp. If found, that touch's price
-and time become the hypothetical entry; the original initalSL price and
-original target price are kept unchanged, and the outcome is re-raced
-mechanically forward from there. Trades with no qualifying MSS+FVG+retest
-are left exactly as they actually happened.
+and time become the hypothetical entry.
+
+Stop-loss (corrected per the user): the ORIGINAL initalSL is NOT reused
+here -- it comes from a different price feed than this candle file (the
+two are already known to disagree by ~0.2R on a meaningful fraction of
+trades, see idealtp_data_quality_check.py), so pairing a candle-derived
+entry with a broker-feed stop is an internal mismatch. Instead the stop is
+placed at the low/high of the SAME structural swing that the MSS broke --
+i.e. the origin of the impulse leg being re-entered on its FVG retest, not
+any later minor pullback low formed after the breakout (that would be a
+different, smaller swing, not "the" swing this setup is built on). This
+level is already computed during MSS detection as each event's
+`stop_level` and is exact at 1-minute resolution (the 5-min structure bars
+are built with low=min/high=max over their five 1-min candles, so a 5-min
+swing extreme already IS the true 1-minute extreme, not an approximation).
+
+The target price is unaffected by this and still stays exactly as it was
+(maxTP's absolute price level, or the 2R-floor computed from the trade's
+original entry/stop, per target_resolution.py's rule) -- only entry and
+stop move together as a pair. Trades with no qualifying MSS+FVG+retest are
+left exactly as they actually happened.
 """
 import numpy as np
 import pandas as pd
@@ -67,20 +84,32 @@ def find_swings(highs: np.ndarray, lows: np.ndarray):
 
 def find_mss_events(closes: np.ndarray, highs: np.ndarray, lows: np.ndarray,
                      swing_high: np.ndarray, swing_low: np.ndarray) -> list:
+    """Each event's `stop_level` is the extreme of the impulse leg that
+    produced it -- the lowest low since the previous MSS (of either
+    direction) up to and including the breakout candle, for a bullish
+    event (mirror: highest high, for bearish). This is "the main swing"
+    the stop belongs to, not any later minor pullback low/high formed
+    after the breakout has already fired -- the window closes at the
+    breakout candle itself, so nothing after it can leak in."""
     events = []
     last_sh_price, last_sl_price = None, None
     consumed_sh, consumed_sl = True, True
+    leg_start = 0
     for i in range(len(closes)):
         if swing_high[i]:
             last_sh_price, consumed_sh = highs[i], False
         if swing_low[i]:
             last_sl_price, consumed_sl = lows[i], False
         if last_sh_price is not None and not consumed_sh and closes[i] > last_sh_price:
-            events.append({"idx": i, "direction": "bullish", "level": last_sh_price})
+            stop_level = float(lows[leg_start:i + 1].min())
+            events.append({"idx": i, "direction": "bullish", "level": last_sh_price, "stop_level": stop_level})
             consumed_sh = True
+            leg_start = i + 1
         if last_sl_price is not None and not consumed_sl and closes[i] < last_sl_price:
-            events.append({"idx": i, "direction": "bearish", "level": last_sl_price})
+            stop_level = float(highs[leg_start:i + 1].max())
+            events.append({"idx": i, "direction": "bearish", "level": last_sl_price, "stop_level": stop_level})
             consumed_sl = True
+            leg_start = i + 1
     return events
 
 
@@ -140,7 +169,7 @@ def _find_setup_for_trade(side: str, opens, highs, lows, closes, entry_idx_in_wi
         return None
 
     return {
-        "mss_idx": mss["idx"], "mss_level": mss["level"],
+        "mss_idx": mss["idx"], "mss_level": mss["level"], "mss_stop_level": mss["stop_level"],
         "fvg_idx": fvg["idx"], "fvg_bottom": fvg["bottom"], "fvg_top": fvg["top"],
         "retest_idx": retest_idx, "retest_price": near_edge,
     }
@@ -189,7 +218,8 @@ def build_fvg_entries(trades: pd.DataFrame, candles: pd.DataFrame,
         retest_time = ts[lo + setup["retest_idx"]]
         rows.append(dict(
             id=t["id"], has_setup=True,
-            mss_level=setup["mss_level"], fvg_bottom=setup["fvg_bottom"], fvg_top=setup["fvg_top"],
+            mss_level=setup["mss_level"], mss_stop_level=setup["mss_stop_level"],
+            fvg_bottom=setup["fvg_bottom"], fvg_top=setup["fvg_top"],
             new_entry_price=setup["retest_price"], new_entry_time=retest_time,
             mss_time=ts[lo + setup["mss_idx"]], fvg_time=ts[lo + setup["fvg_idx"]],
         ))
@@ -216,10 +246,11 @@ def _resolve_target(row_maxtp, entry, sl, side):
 
 def simulate_fvg_outcomes(trades: pd.DataFrame, candles: pd.DataFrame, setups: pd.DataFrame) -> pd.DataFrame:
     """For trades with a qualifying setup: re-race mechanically from the
-    new (retest) entry, on 1-minute candles, keeping the ORIGINAL target
-    price and ORIGINAL initalSL price exactly as they were (per the user:
-    "the target itself stays the same"). Trades with no qualifying setup
-    are reported completely unchanged (actual result carried through).
+    new (retest) entry, on 1-minute candles, against a NEW stop at the
+    swing that the MSS broke (mss_stop_level -- see module docstring for
+    why the original initalSL is not reused) and the ORIGINAL target price
+    unchanged. Trades with no qualifying setup are reported completely
+    unchanged (actual result carried through).
     """
     ts = candles["datetime_utc"].values
     opens_all = candles["open"].values
@@ -243,14 +274,19 @@ def simulate_fvg_outcomes(trades: pd.DataFrame, candles: pd.DataFrame, setups: p
                     risk_price_orig=risk_orig)
 
         if not t["has_setup"] or np.isnan(target) or risk_orig == 0:
-            rows.append(dict(base, new_entry=entry_orig, new_r=t["avgRiskReward"],
+            rows.append(dict(base, new_entry=entry_orig, new_sl=sl, new_r=t["avgRiskReward"],
                              outcome="unchanged", risk_price_new=risk_orig))
             continue
 
         new_entry = t["new_entry_price"]
-        risk_new = abs(new_entry - sl)
-        if risk_new == 0:
-            rows.append(dict(base, new_entry=entry_orig, new_r=t["avgRiskReward"],
+        new_sl = t["mss_stop_level"]
+        # the new stop must actually sit on the protective side of the new
+        # entry -- if the swing low/high isn't below/above it (shouldn't
+        # happen structurally, but not assumed), the setup isn't usable
+        sl_is_valid = (new_sl < new_entry) if is_buy else (new_sl > new_entry)
+        risk_new = abs(new_entry - new_sl)
+        if not sl_is_valid or risk_new == 0 or np.isnan(new_sl):
+            rows.append(dict(base, new_entry=entry_orig, new_sl=sl, new_r=t["avgRiskReward"],
                              outcome="unchanged", risk_price_new=risk_orig))
             continue
 
@@ -262,10 +298,10 @@ def simulate_fvg_outcomes(trades: pd.DataFrame, candles: pd.DataFrame, setups: p
         outcome, r = "unresolved", np.nan
         for k in range(lo, hi):
             o, h, l = opens_all[k], highs_all[k], lows_all[k]
-            hit_sl = (l <= sl) if is_buy else (h >= sl)
+            hit_sl = (l <= new_sl) if is_buy else (h >= new_sl)
             hit_tp = (h >= target) if is_buy else (l <= target)
             if hit_sl:
-                fill = sl if (o >= sl if is_buy else o <= sl) else o
+                fill = new_sl if (o >= new_sl if is_buy else o <= new_sl) else o
                 outcome = "stop"
             elif hit_tp:
                 fill = target if (o <= target if is_buy else o >= target) else o
@@ -276,10 +312,11 @@ def simulate_fvg_outcomes(trades: pd.DataFrame, candles: pd.DataFrame, setups: p
             break
 
         if outcome == "unresolved":
-            rows.append(dict(base, new_entry=entry_orig, new_r=t["avgRiskReward"],
+            rows.append(dict(base, new_entry=entry_orig, new_sl=sl, new_r=t["avgRiskReward"],
                              outcome="unchanged_unresolved", risk_price_new=risk_orig))
         else:
-            rows.append(dict(base, new_entry=new_entry, new_r=r, outcome=outcome, risk_price_new=risk_new))
+            rows.append(dict(base, new_entry=new_entry, new_sl=new_sl, new_r=r, outcome=outcome,
+                             risk_price_new=risk_new))
 
     out = pd.DataFrame(rows)
     out["actual_pnl_usd"] = out["actual_r"] * out["risk_price_orig"] * out["amount"]
