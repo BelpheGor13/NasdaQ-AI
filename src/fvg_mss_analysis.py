@@ -248,9 +248,23 @@ def simulate_fvg_outcomes(trades: pd.DataFrame, candles: pd.DataFrame, setups: p
     """For trades with a qualifying setup: re-race mechanically from the
     new (retest) entry, on 1-minute candles, against a NEW stop at the
     swing that the MSS broke (mss_stop_level -- see module docstring for
-    why the original initalSL is not reused) and the ORIGINAL target price
-    unchanged. Trades with no qualifying setup are reported completely
-    unchanged (actual result carried through).
+    why the original initalSL is not reused).
+
+    Target: when maxTP is real (213 trades), it's an absolute historical
+    price level -- kept exactly as recorded, same as the entry/stop for
+    THAT case would need no adjustment even if it mixed feeds slightly
+    (the candle-vs-trade-log gap is already bounded and documented, ~0.2R
+    median, in idealtp_data_quality_check.py). But when maxTP is absent
+    and the 2R-floor applies (576 trades), that floor must NOT be computed
+    from the original entryPrice/initalSL (a different feed) while entry
+    and stop for this setup are candle-derived -- that would silently
+    re-introduce the exact cross-feed mismatch the new stop was built to
+    avoid. So the floor is recomputed from the NEW entry/stop, in the same
+    candle frame, for setup trades specifically.
+
+    Trades with no qualifying setup are reported completely unchanged
+    (actual result carried through, target resolved in the original
+    entryPrice/initalSL frame since that's the frame the real trade lived in).
     """
     ts = candles["datetime_utc"].values
     opens_all = candles["open"].values
@@ -265,17 +279,17 @@ def simulate_fvg_outcomes(trades: pd.DataFrame, candles: pd.DataFrame, setups: p
         t = merged.iloc[i]
         entry_orig, sl, side = t["entryPrice"], t["initalSL"], t["side"]
         is_buy = side == "buy"
-        target, trustworthy = _resolve_target(t["maxTP"], entry_orig, sl, side)
+        target_orig_frame, trustworthy = _resolve_target(t["maxTP"], entry_orig, sl, side)
         risk_orig = abs(entry_orig - sl)
 
         base = dict(id=t["id"], side=side, has_setup=bool(t["has_setup"]),
-                    actual_r=t["avgRiskReward"], target_price=target, target_trustworthy=trustworthy,
+                    actual_r=t["avgRiskReward"], target_trustworthy=trustworthy,
                     entry_orig=entry_orig, initalSL=sl, amount=t["amount"],
                     risk_price_orig=risk_orig)
 
-        if not t["has_setup"] or np.isnan(target) or risk_orig == 0:
-            rows.append(dict(base, new_entry=entry_orig, new_sl=sl, new_r=t["avgRiskReward"],
-                             outcome="unchanged", risk_price_new=risk_orig))
+        if not t["has_setup"] or np.isnan(target_orig_frame) or risk_orig == 0:
+            rows.append(dict(base, new_entry=entry_orig, new_sl=sl, target_price=target_orig_frame,
+                             new_r=t["avgRiskReward"], outcome="unchanged", risk_price_new=risk_orig))
             continue
 
         new_entry = t["new_entry_price"]
@@ -286,9 +300,14 @@ def simulate_fvg_outcomes(trades: pd.DataFrame, candles: pd.DataFrame, setups: p
         sl_is_valid = (new_sl < new_entry) if is_buy else (new_sl > new_entry)
         risk_new = abs(new_entry - new_sl)
         if not sl_is_valid or risk_new == 0 or np.isnan(new_sl):
-            rows.append(dict(base, new_entry=entry_orig, new_sl=sl, new_r=t["avgRiskReward"],
-                             outcome="unchanged", risk_price_new=risk_orig))
+            rows.append(dict(base, new_entry=entry_orig, new_sl=sl, target_price=target_orig_frame,
+                             new_r=t["avgRiskReward"], outcome="unchanged", risk_price_new=risk_orig))
             continue
+
+        if trustworthy:
+            target = target_orig_frame  # real maxTP: an absolute price level, feed-independent
+        else:
+            target = new_entry + MIN_TARGET_R * risk_new if is_buy else new_entry - MIN_TARGET_R * risk_new
 
         start_dt = pd.Timestamp(t["new_entry_time"])
         end_dt = start_dt + pd.Timedelta(ext.astype("timedelta64[m]").astype(int), unit="m")
@@ -312,11 +331,11 @@ def simulate_fvg_outcomes(trades: pd.DataFrame, candles: pd.DataFrame, setups: p
             break
 
         if outcome == "unresolved":
-            rows.append(dict(base, new_entry=entry_orig, new_sl=sl, new_r=t["avgRiskReward"],
-                             outcome="unchanged_unresolved", risk_price_new=risk_orig))
+            rows.append(dict(base, new_entry=entry_orig, new_sl=sl, target_price=target_orig_frame,
+                             new_r=t["avgRiskReward"], outcome="unchanged_unresolved", risk_price_new=risk_orig))
         else:
-            rows.append(dict(base, new_entry=new_entry, new_sl=new_sl, new_r=r, outcome=outcome,
-                             risk_price_new=risk_new))
+            rows.append(dict(base, new_entry=new_entry, new_sl=new_sl, target_price=target, new_r=r,
+                             outcome=outcome, risk_price_new=risk_new))
 
     out = pd.DataFrame(rows)
     out["actual_pnl_usd"] = out["actual_r"] * out["risk_price_orig"] * out["amount"]
